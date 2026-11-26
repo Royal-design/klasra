@@ -11,6 +11,7 @@ This document translates [PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md) into
 | Database | PostgreSQL (local for dev) | Synchronous SQLAlchemy 2.0 + `psycopg` v3 |
 | Migrations | Alembic | Wired to `app.core.config` and `app.db.base.Base` |
 | Environment | Standard Python `venv` + `pip` | Managed via `backend/pyproject.toml` |
+| Email provider | Resend | Transactional email (invites, verification, notifications) via an `EmailService` adapter |
 | Version control | Git (`master` branch) | Remote: `https://github.com/Royal-design/lms` |
 
 ## 2. Backend Architecture
@@ -45,9 +46,10 @@ backend/
 
 As domain slices are added, keep layers cleanly separated inside `backend/app/`:
 
-- `app/models/` — SQLAlchemy ORM models (one module per domain area, imported in `app/db/models.py` for Alembic autogenerate).
+- `app/models/` — SQLAlchemy ORM models (one module per domain area, imported in `app/models/__init__.py` for Alembic autogenerate).
+- `app/repositories/` — Lightweight, `school_id`-scoped SQLAlchemy query functions (keeps tenant filtering explicit and reusable).
 - `app/schemas/` — Pydantic request/response schemas (strict input validation, explicit response models so internal fields never leak).
-- `app/services/` — Business logic, transaction boundaries, and audit event recording.
+- `app/services/` — Business rules, state transitions, transaction boundaries, and audit event recording.
 - `app/core/security.py` — Password hashing, token/session handling, and cryptographic helpers.
 - `app/api/deps.py` — Reusable FastAPI dependencies for authentication, role checks, and school/resource authorization.
 - `app/api/v1/` — Thin route handlers delegating to services.
@@ -63,6 +65,171 @@ To satisfy both strict school isolation and multi-school parent access:
 3. **Parent/guardian links (`guardian_links`):** Links a parent `user_id` to a student record (`student_id`, `school_id`) with `status` (`pending`, `approved`, `revoked`) and approval metadata (`AUTH-04`).
 4. **Request authorization flow:**
    - Authenticate user → resolve active role/membership for the target `school_id` (or approved `guardian_link` for parent endpoints) → verify resource ownership/assignment before reading or mutating data.
+
+### 3.1 Database Plan (ERD)
+
+Every school-owned table carries `school_id` to enforce strict tenant isolation. Login accounts (`users`) are separated from school roles (`school_memberships`) and multi-school parent relationships (`guardian_links`).
+
+```mermaid
+erDiagram
+    SCHOOLS ||--o{ SCHOOL_MEMBERSHIPS : has
+    USERS ||--o{ SCHOOL_MEMBERSHIPS : holds
+    USERS ||--o{ GUARDIAN_LINKS : "parent_user"
+    USERS ||--o{ GUARDIAN_LINKS : "student_user"
+    SCHOOLS ||--o{ GUARDIAN_LINKS : scopes
+
+    SCHOOLS ||--o{ ACADEMIC_YEARS : has
+    ACADEMIC_YEARS ||--o{ TERMS : contains
+    SCHOOLS ||--o{ YEAR_LEVELS : defines
+    YEAR_LEVELS ||--o{ CLASS_GROUPS : groups
+    ACADEMIC_YEARS ||--o{ CLASS_GROUPS : runs_in
+
+    SCHOOLS ||--o{ SUBJECTS : defines
+    CLASS_GROUPS ||--o{ SUBJECT_OFFERINGS : schedules
+    SUBJECTS ||--o{ SUBJECT_OFFERINGS : taught_as
+    TERMS ||--o{ SUBJECT_OFFERINGS : occurs_in
+    SUBJECT_OFFERINGS ||--o{ OFFERING_TEACHERS : assigned_to
+    USERS ||--o{ OFFERING_TEACHERS : teaches
+
+    CLASS_GROUPS ||--o{ ENROLLMENTS : enrolls
+    SUBJECT_OFFERINGS ||--o{ ENROLLMENTS : enrolls_in
+    USERS ||--o{ ENROLLMENTS : student
+
+    SUBJECT_OFFERINGS ||--o{ LESSONS : publishes
+    SUBJECT_OFFERINGS ||--o{ ASSIGNMENTS : creates
+    ASSIGNMENTS ||--o{ SUBMISSIONS : receives
+    USERS ||--o{ SUBMISSIONS : submits
+    SUBMISSIONS ||--o| GRADES : evaluated_by
+
+    SUBJECT_OFFERINGS ||--o{ ATTENDANCE_RECORDS : tracks
+    USERS ||--o{ ATTENDANCE_RECORDS : student
+
+    SCHOOLS ||--o{ INVITATIONS_AND_CODES : issues
+    SCHOOLS ||--o{ AUDIT_EVENTS : logs
+    USERS ||--o{ AUDIT_EVENTS : actor
+
+    SCHOOLS {
+        uuid id PK
+        string name
+        string slug UK
+        string status
+        jsonb terminology_config
+        timestamptz created_at
+    }
+
+    USERS {
+        uuid id PK
+        string email UK
+        string phone
+        string password_hash
+        string full_name
+        boolean is_platform_admin
+        boolean is_active
+        timestamptz created_at
+    }
+
+    SCHOOL_MEMBERSHIPS {
+        uuid id PK
+        uuid user_id FK
+        uuid school_id FK
+        string role "school_admin|teacher|student"
+        string status "pending|active|revoked"
+        timestamptz created_at
+    }
+
+    GUARDIAN_LINKS {
+        uuid id PK
+        uuid school_id FK
+        uuid parent_user_id FK
+        uuid student_user_id FK
+        string status "pending|approved|revoked"
+        uuid approved_by FK
+        timestamptz approved_at
+    }
+
+    AUDIT_EVENTS {
+        uuid id PK
+        uuid school_id FK
+        uuid actor_user_id FK
+        string action
+        string target_type
+        uuid target_id
+        jsonb metadata
+        timestamptz created_at
+    }
+```
+
+### 3.2 Request Authorization & Multi-Tenant Flowchart
+
+```mermaid
+flowchart TD
+    A["Incoming API Request (/api/v1/*)"] --> B{"Public endpoint?\n(health, login, self-register, verify)"}
+    B -- Yes --> C["Rate limit & input validation"]
+    C --> D["Execute public handler"]
+
+    B -- No --> E{"Valid authenticated session?\n(Cookie/Token + CSRF for writes)"}
+    E -- No --> F["401 Unauthorized / 403 CSRF Failed"]
+
+    E -- Yes --> G{"User account active?"}
+    G -- No --> H["403 Account Inactive"]
+
+    G -- Yes --> I{"Route scope"}
+    I -- Platform Admin --> J{"user.is_platform_admin?"}
+    J -- No --> K["403 Forbidden"]
+    J -- Yes --> L["Allow platform operation\n(No automatic school learning data access)"]
+
+    I -- School-Scoped --> M{"Active school_membership\nfor target school_id & role?"}
+    M -- No --> N["403 Forbidden (Fail Closed)"]
+    M -- Yes --> O{"Resource ownership / assignment?\n(Teacher assigned? Student enrolled?)"}
+    O -- No --> N
+    O -- Yes --> P["Filter query strictly by school_id\n& authorized scope"]
+
+    I -- Parent Progress --> Q{"Approved guardian_link\nfor parent_user_id + student_id?"}
+    Q -- No --> N
+    Q -- Yes --> R["Return permitted fields ONLY\n(grades, attendance, teacher feedback)"]
+```
+
+### 3.3 Email Provider Plan (Resend)
+
+**Provider:** [Resend](https://resend.com) for all transactional emails (staff/student invitations, student registration decisions, parent link verification & approval notices, and future assignment/grade alerts).
+
+- **Adapter architecture (`app/services/email.py`):**
+  - Define an `EmailProvider` protocol/interface with `send_email(to, subject, html, text)`.
+  - `ResendEmailProvider` — calls Resend's HTTPS API using `RESEND_API_KEY` and `EMAIL_FROM` in staging/production.
+  - `ConsoleEmailProvider` (or `InMemoryEmailProvider` in `pytest`) — used in local dev/tests when `EMAIL_PROVIDER=console` so automated tests never send real emails or require live API keys.
+- **Configuration (env vars, never hardcoded):**
+  - `EMAIL_PROVIDER`: `console` (default for local dev/test) or `resend` (staging/production).
+  - `RESEND_API_KEY`: Required when `EMAIL_PROVIDER=resend` (fail fast on startup if missing).
+  - `EMAIL_FROM`: Verified sender address (e.g., `no-reply@yourdomain.com`, with SPF/DKIM/DMARC verified in Resend before production).
+  - `FRONTEND_BASE_URL`: Used to construct invitation/verification links safely (allow-listed, never derived from untrusted request `Host` headers).
+- **Security & reliability rules:**
+  - Never log raw invitation tokens, verification codes, or `RESEND_API_KEY`.
+  - Commit the database record first, then trigger email delivery; if Resend returns a transient error/timeout, return a clear status or queue a retry without corrupting DB state, and expose a rate-limited "resend invite" action (with cooldown) for school admins.
+
+### 3.4 Edge & Error Case Matrix
+
+All endpoints must handle these edge cases explicitly and consistently:
+
+| Category | Edge / Error Case | Expected API Behavior |
+| --- | --- | --- |
+| **Auth & Sessions** | Wrong email or password | `401 Unauthorized` with generic message (`Invalid credentials`) — never reveal whether the email exists. |
+| **Auth & Sessions** | Deactivated or suspended user logs in or uses existing session | `403 Forbidden`; invalidate active sessions on deactivation. |
+| **Auth & Sessions** | Expired/revoked session or missing CSRF token on write | `401 Unauthorized` (expired session) / `403 Forbidden` (invalid CSRF). |
+| **Auth & Sessions** | Brute-force login or invite resend spam | `429 Too Many Requests` with `Retry-After` header. |
+| **Multi-Tenancy** | User from School A requests a resource belonging to School B | `403 Forbidden` or `404 Not Found` (never leak existence or details of School B's records). |
+| **Multi-Tenancy** | Platform Admin tries to read student grades/submissions/attendance | `403 Forbidden` unless a separate explicit school role/operational permission exists. |
+| **Role Invariants** | Admin tries to assign a Teacher to a second active school (`AUTH-03`) | `409 Conflict` (`TEACHER_SINGLE_SCHOOL_VIOLATION`), enforced by both service logic and PostgreSQL partial unique index. |
+| **Role Invariants** | School Admin tries to revoke/demote the last active `school_admin` of a school | `409 Conflict` (`LAST_SCHOOL_ADMIN`) — prevents locking out a school. |
+| **Role Invariants** | Pending student tries to access classes, lessons, or assignments (`AUTH-02`) | `403 Forbidden` (`MEMBERSHIP_PENDING`). |
+| **Role Invariants** | Parent tries to view unapproved/revoked child or accesses lessons/assignments (`PROG-02`) | `403 Forbidden` — parent access is restricted to approved child progress fields only. |
+| **State Transitions** | Approving/rejecting an already-processed registration or revoking an already-revoked link | `409 Conflict` (`INVALID_STATE_TRANSITION`). |
+| **Duplicates & Integrity** | Duplicate school slug, duplicate email, or duplicate active membership | `409 Conflict` with machine-readable error code. |
+| **Historical Data** | Deleting a class, subject, or withdrawing a student who has grades/attendance | Reject destructive delete (`409 Conflict`) or transition status/effective end date so historical records remain intact (`SCH-04`). |
+| **Invites & Tokens** | Expired, tampered, or already-used invitation/verification token | `400 Bad Request` or `410 Gone` (`TOKEN_INVALID_OR_EXPIRED`); token hash is marked used atomically to prevent race-condition replay. |
+| **Email Delivery (Resend)** | Resend API timeout, rate limit, or 5xx error during invite | Log sanitized failure (no token/PII), do not roll back valid user/invite creation silently without informing caller, return clear warning/retryable state. |
+| **Validation & Files** | Malformed UUID, invalid enum, missing required field | `422 Unprocessable Entity` with field-level validation errors. |
+| **Validation & Files** | Disallowed file extension/magic bytes or oversized upload (Slice 6+) | `415 Unsupported Media Type` / `413 Payload Too Large`. |
+| **Infrastructure** | PostgreSQL connection failure or unexpected server error | `503 Service Unavailable` (DB down) or `500 Internal Server Error` with generic message; never expose SQL queries or tracebacks. |
 
 ## 4. Vertical Slice Roadmap
 
@@ -125,5 +292,5 @@ These items from Section 10 of `PRODUCT_REQUIREMENTS.md` should be finalized bef
 | 5 | Allowed submission file types and max upload size | Slice 6 / Slice 7 |
 | 6 | Required attendance statuses (e.g., present, absent, late, excused) | Slice 9 |
 | 7 | Whether grades stay hidden until explicitly published by a teacher | Slice 8 |
-| 8 | Notification channels (email, SMS, in-app) for invites/updates | Slice 4 & Slice 5 |
+| 8 | Notification channels (email, SMS, in-app) for invites/updates | **Email decided: Resend** (SMS/in-app optional later, confirm before Slice 4/5) |
 | 9 | Hosting, backup cadence, expected user volume, and availability targets | Slice 10 |

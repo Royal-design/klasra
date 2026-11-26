@@ -201,7 +201,7 @@ These affect detailed implementation and should be decided before the related fe
 5. Which submission file types and maximum sizes should be allowed?
 6. What attendance statuses are required (for example, present, absent, late, excused)?
 7. Should grades be hidden from students/parents until a teacher publishes them?
-8. What notification channels are required for invitations, new assignments, grades, and attendance?
+8. What notification channels are required for invitations, new assignments, grades, and attendance? *(Decided: **Resend** will be used for transactional email notifications; SMS and in-app notifications remain open to decide if needed.)*
 9. What hosting, backup, expected user volume, and availability targets are required?
 
 ## 11. Suggested AI-assisted build process

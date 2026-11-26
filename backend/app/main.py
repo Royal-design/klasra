@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
+from app.core.errors import register_exception_handlers
+from app.core.rate_limit import SlidingWindowRateLimiter
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -17,10 +19,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title=app_settings.app_name,
-        version="0.1.0",
+        version="0.2.0",
         docs_url=docs_url,
         redoc_url=redoc_url,
         openapi_url=openapi_url,
+    )
+    app.state.settings = app_settings
+
+    register_exception_handlers(app)
+
+    rate_limiter = SlidingWindowRateLimiter(
+        general_limit=app_settings.rate_limit_per_minute,
+        login_limit=app_settings.login_rate_limit_per_minute,
+        login_path=f"{app_settings.api_v1_prefix}/auth/login",
     )
 
     app.add_middleware(
@@ -32,11 +43,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     @app.middleware("http")
-    async def add_security_headers(
+    async def rate_limit_and_security_headers(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
-        response = await call_next(request)
+        limited = rate_limiter.check(request)
+        if limited is not None:
+            response = limited
+        else:
+            response = await call_next(request)
+
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
@@ -51,4 +67,3 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(api_router, prefix=app_settings.api_v1_prefix)
 
     return app
-
