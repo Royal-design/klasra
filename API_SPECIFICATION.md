@@ -120,20 +120,24 @@ Accepts `multipart/form-data` (`file`: `.csv` UTF-8 or `.xlsx` verified via `PK\
 | `POST` | `/api/v1/schools/{school_id}/imports/validate` | School Admin | Yes | Dry-run validate spreadsheet and return row-level errors + preview without writing to DB. |
 | `POST` | `/api/v1/schools/{school_id}/imports/commit` | School Admin | Yes | Validate and atomically commit users, memberships, and optional student enrollments (audited). Rejects with `422 IMPORT_VALIDATION_FAILED` if any row has errors. |
 
+### Student Self-Registration & Admin Approval (Slice 4 — `AUTH-02`, `AUTH-06`)
+
+Registration codes and email invitations identify a school cohort or invited student email; they **never** grant immediate school access or elevated roles. Every self-registered student remains `pending` until approved by a School Admin.
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/registrations/students` | Public (strict rate limit) | No | Submit a pending student self-registration with a valid registration code or single-use email invitation token. Always assigns `role=student`, `status=pending` (audited). |
+| `POST` | `/api/v1/schools/{school_id}/registrations/codes` | School Admin | Yes | Generate a short-lived cohort registration code (returns raw `code` once; stores SHA-256 hash only; audited). |
+| `POST` | `/api/v1/schools/{school_id}/registrations/invitations` | School Admin | Yes | Create a single-use email invitation bound to `invited_email` and send the registration link via Resend (audited). |
+| `GET` | `/api/v1/schools/{school_id}/registrations/students` | School Admin | No | List student registration requests for `{school_id}` (optional `?status=pending\|approved\|rejected`). |
+| `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/approve` | School Admin | Yes | Approve a pending student registration, activate membership, optionally enroll into `class_group_id`, notify via Resend, and record audit event. |
+| `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/reject` | School Admin | Yes | Reject a pending registration, revoke membership & active sessions, notify via Resend, and record audit event. |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 4 — Student Self-Registration (`AUTH-02`, `AUTH-06`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/v1/registrations/students` | Public | Submit pending student account + school registration code |
-| `GET` | `/api/v1/schools/{school_id}/registrations/students` | School Admin | List pending student registration requests |
-| `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/approve` | School Admin | Approve and match student to enrollment (audited) |
-| `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/reject` | School Admin | Reject registration request (audited) |
 
 ### Slice 5 — Parent/Guardian Linking (`AUTH-04`, `AUTH-06`)
 

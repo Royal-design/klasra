@@ -40,6 +40,7 @@ def create_app(
             f"{app_settings.api_v1_prefix}/auth/login",
             f"{app_settings.api_v1_prefix}/auth/forgot-password",
             f"{app_settings.api_v1_prefix}/auth/reset-password",
+            f"{app_settings.api_v1_prefix}/registrations/students",
         },
     )
 

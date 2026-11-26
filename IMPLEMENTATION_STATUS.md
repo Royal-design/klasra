@@ -11,8 +11,8 @@
 | **1** | FastAPI foundation, config, PostgreSQL SQLAlchemy, Alembic, `/api/v1/health` | Foundation | **Done** | 3/3 `pytest` tests passing; live PostgreSQL (`lms`) verified `200 OK`; Alembic `1.20.1` configured |
 | **2** | Schools, accounts, auth, memberships, roles, school-scoped authorization | `SCH-01`, `AUTH-01`, `AUTH-03`, `AUTH-05`, `AUTH-06` | **Done** | 7/7 `pytest` tests passing; migration `0001_slice2_auth_schools` applied to PostgreSQL `lms` |
 | **3** | Academic years, terms, class groups, subjects, offerings, enrollments, spreadsheet import | `SCH-02`, `SCH-03`, `SCH-04`, `SCH-05` | **Done** | 9/9 `pytest` tests passing; migration `0002_slice3_academic_structure` applied to PostgreSQL `lms` |
-| **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | Not Started | Next up (confirm Open Decision #2) |
-| **5** | Parent invitations, verification, approval & multi-school child links | `AUTH-04`, `AUTH-06` | Not Started | Email provider decided (**Resend**); SMS/in-app optional |
+| **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | **Done** | 15/15 `pytest` tests passing; migration `0004_slice4_student_registration` applied to PostgreSQL `lms` |
+| **5** | Parent invitations, verification, approval & multi-school child links | `AUTH-04`, `AUTH-06` | Not Started | Next up |
 | **6** | Lessons & secure file storage | `LEARN-01` | Not Started | Blocked on Open Decision #5 |
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Blocked on Open Decisions #4, #5 |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decisions #3, #7 |
@@ -29,7 +29,7 @@
 | `SCH-04` | School admin enrolls, transfers, withdraws students preserving history | **Done** | 3 |
 | `SCH-05` | School admin imports students/staff from spreadsheet with validation | **Done** | 3 |
 | `AUTH-01` | School admin creates accounts and assigns roles within their school | **Done** | 2 |
-| `AUTH-02` | Student self-registration remains pending until school admin approval | Not Started | 4 |
+| `AUTH-02` | Student self-registration remains pending until school admin approval | **Done** | 4 |
 | `AUTH-03` | Teacher associated with only one school | **Done** | 2 |
 | `AUTH-04` | Parent account linked to multiple students across multiple schools | Not Started | 5 |
 | `AUTH-05` | Every protected operation checks role and school/resource assignment | **Done** (Slice 2 scope; extends per slice) | 2 |
@@ -77,7 +77,13 @@
 - Implemented secure CSV & XLSX bulk import (`SCH-05`) with 5 MB limit, magic-byte check, `defusedxml`-protected `openpyxl` parsing, dry-run validation, and atomic commit.
 - Verified with `pytest -v` (9 passed).
 
-## 4. Next Up — Slice 4 Checklist
+### Slice 4 — Student Self-Registration & Admin Approval
+- Added `student_invites` (supporting both short-lived cohort registration codes and single-use email invitations) and `student_registration_requests` models, repository (`app/repositories/registration_repo.py`), and migration `0004_slice4_student_registration`.
+- Implemented `POST /api/v1/registrations/students` (strict rate-limited, always assigns `student` + `pending`, verifies hashed expiring tokens/codes and invitation email binding).
+- Implemented School Admin code generation, email invitation (via Resend), listing, approval (with optional class group enrollment + approval email), and rejection (revoking membership & sessions + rejection email), all audited.
+- Verified with `pytest -v` (15 passed).
 
-Before starting Slice 4 (Student Self-Registration & Approval — `AUTH-02`, `AUTH-06`):
-- Confirm Open Decision #2: should students register using a **short-lived school registration code**, a **school-issued invitation**, or **either**? (Also wires the Resend email adapter for approval/rejection notifications.)
+## 4. Next Up — Slice 5 Checklist
+
+Before starting Slice 5 (Parent/Guardian Linking & Multi-School Child Access — `AUTH-04`, `AUTH-06`):
+- Ready to proceed using our Resend email adapter for parent invitations, hashed single-use contact verification tokens, School Admin approval/revocation with audit trail, and `GET /api/v1/parent/children` across multiple schools.

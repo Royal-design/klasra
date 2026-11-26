@@ -195,7 +195,7 @@ A person’s login account should be distinct from their school-specific members
 These affect detailed implementation and should be decided before the related feature is built:
 
 1. Which country/countries will the first schools operate in?
-2. Should a student use a school-issued invitation, a short-lived registration code, or either method?
+2. Should a student use a school-issued invitation, a short-lived registration code, or either method? *(Decided: **Both** methods are supported — expiring cohort registration codes and single-use email invitations, both hashed and requiring school admin approval.)*
 3. What class/year terminology and grading scales should each school configure?
 4. Are assignments allowed to be late, and can students resubmit? Can teachers set these rules per assignment?
 5. Which submission file types and maximum sizes should be allowed?

@@ -11,6 +11,7 @@ from app.models.academic import (
 from app.models.audit import AuditEvent
 from app.models.membership import SchoolMembership
 from app.models.password_reset import PasswordResetToken
+from app.models.registration import StudentInvite, StudentRegistrationRequest
 from app.models.school import School
 from app.models.session import UserSession
 from app.models.user import User
@@ -24,6 +25,8 @@ __all__ = [
     "PasswordResetToken",
     "School",
     "SchoolMembership",
+    "StudentInvite",
+    "StudentRegistrationRequest",
     "Subject",
     "SubjectOffering",
     "Term",
