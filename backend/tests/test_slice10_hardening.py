@@ -338,3 +338,65 @@ def test_lesson_video_url_and_presigned_upload_playback_flow() -> None:
         _login(client, "outsider@video.example.com", "StudentPassword123!")
         denied_resp = client.get(f"/api/v1/files/{file_id}/download-url?inline=true")
         assert denied_resp.status_code == 403
+
+
+def test_schema_input_normalization_consistency() -> None:
+    import uuid
+
+    from app.schemas.academic import SubjectCreateRequest
+    from app.schemas.attendance import AttendanceEntryInput
+    from app.schemas.grade import GradeUpsertRequest
+    from app.schemas.guardian import GuardianInviteCreateRequest
+    from app.schemas.lesson import LessonCreateRequest
+    from app.schemas.membership import SchoolUserCreateRequest
+    from app.schemas.registration import StudentSelfRegisterRequest
+
+    g = GuardianInviteCreateRequest(
+        student_user_id=uuid.uuid4(),
+        guardian_email="parent@example.com",
+        guardian_full_name="  Ada   O'Brien  ",
+        relationship_label="  legal   guardian  ",
+    )
+    assert g.guardian_full_name == "Ada O'Brien"
+    assert g.relationship_label == "Legal Guardian"
+
+    g2 = GuardianInviteCreateRequest(
+        student_user_id=uuid.uuid4(),
+        guardian_email="parent2@example.com",
+        guardian_full_name="Chidi",
+        relationship_label="GUARDIAN",
+    )
+    assert g2.relationship_label == "Guardian"
+
+    subj = SubjectCreateRequest(code="  math101 ", name="  Further   Mathematics ")
+    assert subj.code == "MATH101"
+    assert subj.name == "Further Mathematics"
+
+    grade = GradeUpsertRequest(score=95, letter_grade=" a+ ")
+    assert grade.letter_grade == "A+"
+    assert GradeUpsertRequest(score=80, letter_grade="   ").letter_grade is None
+
+    att = AttendanceEntryInput(student_user_id=uuid.uuid4(), status=" Present ")  # type: ignore[arg-type]
+    assert att.status == "present"
+
+    member = SchoolUserCreateRequest(
+        email="t@example.com",
+        full_name="  Jane   McDonald ",
+        password="StrongPassword123!",
+        role=" Teacher ",  # type: ignore[arg-type]
+    )
+    assert member.full_name == "Jane McDonald"
+    assert member.role == "teacher"
+
+    lesson = LessonCreateRequest(title="Intro", content="Body", status=" DRAFT ")  # type: ignore[arg-type]
+    assert lesson.status == "draft"
+
+    reg = StudentSelfRegisterRequest(
+        email="s@example.com",
+        full_name="  Kemi   Ade ",
+        password="StrongPassword123!",
+        code_or_token="ABCDEF1234",
+        student_reference="  jss1-042 ",
+    )
+    assert reg.full_name == "Kemi Ade"
+    assert reg.student_reference == "JSS1-042"

@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.normalizers import normalize_optional_upper_code
 
 
 class GradeUpsertRequest(BaseModel):
@@ -9,6 +11,11 @@ class GradeUpsertRequest(BaseModel):
     letter_grade: str | None = Field(default=None, max_length=10)
     feedback: str | None = Field(default=None, max_length=10000)
     is_published: bool = True
+
+    @field_validator("letter_grade")
+    @classmethod
+    def clean_letter_grade(cls, value: str | None) -> str | None:
+        return normalize_optional_upper_code(value)
 
 
 class GradeResponse(BaseModel):

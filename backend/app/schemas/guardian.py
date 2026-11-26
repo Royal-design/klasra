@@ -1,7 +1,9 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.normalizers import normalize_required_text, normalize_title_label
 
 
 class GuardianInviteCreateRequest(BaseModel):
@@ -10,6 +12,16 @@ class GuardianInviteCreateRequest(BaseModel):
     guardian_full_name: str = Field(min_length=2, max_length=200)
     relationship_label: str = Field(default="Guardian", min_length=2, max_length=50)
     expires_in_hours: int = Field(default=72, ge=1, le=720)
+
+    @field_validator("guardian_full_name")
+    @classmethod
+    def clean_guardian_name(cls, value: str) -> str:
+        return normalize_required_text(value)
+
+    @field_validator("relationship_label")
+    @classmethod
+    def clean_relationship_label(cls, value: str) -> str:
+        return normalize_title_label(value)
 
 
 class GuardianVerifyRequest(BaseModel):

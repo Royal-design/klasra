@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.normalizers import normalize_enum_str
+
 LessonStatus = Literal["draft", "published"]
 
 ALLOWED_VIDEO_HOSTS = frozenset(
@@ -45,6 +47,11 @@ class LessonCreateRequest(BaseModel):
     video_url: str | None = Field(default=None, max_length=500)
     status: LessonStatus = "published"
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
+
     @field_validator("video_url")
     @classmethod
     def validate_video_url(cls, value: str | None) -> str | None:
@@ -56,6 +63,11 @@ class LessonUpdateRequest(BaseModel):
     content: str | None = Field(default=None, min_length=1, max_length=50000)
     video_url: str | None = Field(default=None, max_length=500)
     status: LessonStatus | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
     @field_validator("video_url")
     @classmethod

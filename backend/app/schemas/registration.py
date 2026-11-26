@@ -1,7 +1,12 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.normalizers import (
+    normalize_optional_upper_code,
+    normalize_required_text,
+)
 
 
 class RegistrationCodeCreateRequest(BaseModel):
@@ -41,6 +46,16 @@ class StudentSelfRegisterRequest(BaseModel):
     password: str = Field(min_length=12, max_length=128)
     code_or_token: str = Field(min_length=6, max_length=256)
     student_reference: str | None = Field(default=None, max_length=100)
+
+    @field_validator("full_name")
+    @classmethod
+    def clean_full_name(cls, value: str) -> str:
+        return normalize_required_text(value)
+
+    @field_validator("student_reference")
+    @classmethod
+    def clean_student_reference(cls, value: str | None) -> str | None:
+        return normalize_optional_upper_code(value)
 
 
 class StudentRegistrationApproveRequest(BaseModel):

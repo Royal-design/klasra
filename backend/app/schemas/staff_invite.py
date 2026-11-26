@@ -2,7 +2,9 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.normalizers import normalize_enum_str, normalize_required_text
 
 StaffRole = Literal["teacher", "school_admin"]
 
@@ -12,6 +14,16 @@ class StaffInviteCreateRequest(BaseModel):
     full_name: str = Field(min_length=2, max_length=200)
     role: StaffRole = "teacher"
     expires_in_hours: int = Field(default=72, ge=1, le=720)
+
+    @field_validator("full_name")
+    @classmethod
+    def clean_full_name(cls, value: str) -> str:
+        return normalize_required_text(value)
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def clean_role(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
 
 class StaffInviteAcceptRequest(BaseModel):

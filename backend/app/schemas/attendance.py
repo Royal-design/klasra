@@ -2,7 +2,9 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.normalizers import normalize_enum_str
 
 AttendanceStatus = Literal["present", "absent", "late", "excused"]
 
@@ -11,6 +13,11 @@ class AttendanceEntryInput(BaseModel):
     student_user_id: uuid.UUID
     status: AttendanceStatus
     notes: str | None = Field(default=None, max_length=500)
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
 
 class AttendanceBatchUpsertRequest(BaseModel):

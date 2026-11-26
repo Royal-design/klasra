@@ -2,9 +2,10 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.lesson import StoredFileSummary
+from app.schemas.normalizers import normalize_enum_str
 
 AssignmentStatus = Literal["draft", "published"]
 
@@ -18,6 +19,11 @@ class AssignmentCreateRequest(BaseModel):
     allow_resubmissions: bool = True
     status: AssignmentStatus = "published"
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
+
 
 class AssignmentUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=200)
@@ -27,6 +33,11 @@ class AssignmentUpdateRequest(BaseModel):
     allow_late_submissions: bool | None = None
     allow_resubmissions: bool | None = None
     status: AssignmentStatus | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
 
 class AssignmentResponse(BaseModel):

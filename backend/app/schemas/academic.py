@@ -2,7 +2,13 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.normalizers import (
+    normalize_enum_str,
+    normalize_required_text,
+    normalize_upper_code,
+)
 
 
 # --- Academic Years ---
@@ -23,6 +29,11 @@ class AcademicYearUpdateRequest(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     status: Literal["active", "archived"] | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
 
 class AcademicYearResponse(BaseModel):
@@ -124,6 +135,16 @@ class SubjectCreateRequest(BaseModel):
     code: str = Field(min_length=1, max_length=30)
     name: str = Field(min_length=2, max_length=150)
 
+    @field_validator("code")
+    @classmethod
+    def clean_code(cls, value: str) -> str:
+        return normalize_upper_code(value)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value: str) -> str:
+        return normalize_required_text(value)
+
 
 class SubjectUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=150)
@@ -150,6 +171,11 @@ class SubjectOfferingCreateRequest(BaseModel):
 
 class SubjectOfferingUpdateRequest(BaseModel):
     status: Literal["active", "archived"] | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def clean_status(cls, value: object) -> object:
+        return normalize_enum_str(value)
 
 
 class OfferingTeacherAssignRequest(BaseModel):
