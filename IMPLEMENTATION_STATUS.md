@@ -14,8 +14,8 @@
 | **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | **Done** | 15/15 `pytest` tests passing; migration `0004_slice4_student_registration` applied to PostgreSQL `lms` |
 | **5** | Parent invitations, verification, approval & multi-school child links (+ staff email activation) | `AUTH-04`, `AUTH-06` | **Done** | 18/18 `pytest` tests passing; migrations `0005_staff_invitations` & `0006_slice5_guardian_links` applied to PostgreSQL `lms` |
 | **6** | Lessons & secure file storage | `LEARN-01` | **Done** | 19/19 `pytest` tests passing; migration `0007_slice6_lessons_and_files` applied to PostgreSQL `lms` |
-| **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Next up (confirm Open Decision #4: late & resubmission defaults) |
-| **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decisions #3, #7 |
+| **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | **Done** | 20/20 `pytest` tests passing; migration `0008_slice7_assignments` applied to PostgreSQL `lms` |
+| **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Next up (confirm Open Decision #7: grades hidden until published) |
 | **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decision #6 |
 | **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Blocked on Open Decisions #1, #9 |
 
@@ -35,9 +35,9 @@
 | `AUTH-05` | Every protected operation checks role and school/resource assignment | **Done** (Slices 2–5 scope; extends per slice) | 2 |
 | `AUTH-06` | Audit trail for admin decisions, role, enrollment, and guardian link changes | **Done** (extends to grades/attendance in Slices 8–9) | 2–5 |
 | `LEARN-01` | Teacher publishes lessons/materials to assigned subject offerings | **Done** | 6 |
-| `ASSIGN-01` | Teacher creates assignment for assigned subject offering | Not Started | 7 |
-| `ASSIGN-02` | Enrolled students submit typed text and file uploads | Not Started | 7 |
-| `ASSIGN-03` | System records submission time and retains resubmission history | Not Started | 7 |
+| `ASSIGN-01` | Teacher creates assignment for assigned subject offering | **Done** | 7 |
+| `ASSIGN-02` | Enrolled students submit typed text and file uploads | **Done** | 7 |
+| `ASSIGN-03` | System records submission time and retains resubmission history | **Done** | 7 |
 | `ASSIGN-04` | Teacher reviews submissions and records grade and feedback | Not Started | 8 |
 | `PROG-01` | Student views only their own grades, attendance, and feedback | Not Started | 8–9 |
 | `PROG-02` | Approved parent views only linked children's grades, attendance, and feedback | Not Started | 8–9 |
@@ -93,7 +93,12 @@
 - Enforced allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.txt`, `.docx`, `.pptx`), magic-byte validation, ZIP traversal checks, 10 MB size limit, random UUID filenames stored outside public web paths, and authorized download streaming (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`).
 - Verified with `pytest -v` (19 passed).
 
-## 4. Next Up — Slice 7 Checklist
+### Slice 7 — Assignments, Submissions & Resubmission History
+- Added `assignments` and `submissions` models, extended `stored_files` with `assignment_id` & `submission_id`, created `app/repositories/assignment_repo.py`, `app/services/assignment.py`, `app/api/v1/assignments.py`, and migration `0008_slice7_assignments`.
+- Enforced per-assignment `allow_late_submissions` (`409 LATE_SUBMISSION_NOT_ALLOWED`) and `allow_resubmissions` (`409 RESUBMISSION_NOT_ALLOWED`) policies, versioned submission history (`version_number`, `is_latest`), and strict student-to-student privacy on submissions and file downloads.
+- Verified with `pytest -v` (20 passed).
 
-Before starting Slice 7 (Assignments, Submissions & Resubmission Rules — `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03`):
-- Confirm Open Decision #4: allow teachers to configure `allow_late_submissions` and `allow_resubmissions` per assignment (recommended default: both configurable per assignment, retaining full versioned submission history).
+## 4. Next Up — Slice 8 Checklist
+
+Before starting Slice 8 (Grades, Feedback & Student/Parent Progress Views — `ASSIGN-04`, `PROG-01`, `PROG-02`):
+- Confirm Open Decision #7: should grades support a `is_published` flag (hidden from students/parents until the teacher publishes them, defaulting to `true` or teacher-selectable)? (Recommended: `is_published` boolean per grade, defaulting to `true` so teachers can publish immediately or save as draft.)

@@ -246,15 +246,35 @@ def authorize_and_resolve_file_download(
     if stored is None:
         raise AppError(404, "FILE_NOT_FOUND", "File not found.")
 
-    if stored.lesson_id is None or stored.lesson is None:
-        raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
-
-    _offering, is_teacher = _check_offering_read_access(
-        db,
-        offering_id=stored.lesson.subject_offering_id,
-        user_id=actor_user_id,
-    )
-    if not is_teacher and stored.lesson.status != "published":
+    if stored.lesson_id is not None and stored.lesson is not None:
+        _offering, is_teacher = _check_offering_read_access(
+            db,
+            offering_id=stored.lesson.subject_offering_id,
+            user_id=actor_user_id,
+        )
+        if not is_teacher and stored.lesson.status != "published":
+            raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
+    elif stored.assignment_id is not None and stored.assignment is not None:
+        _offering, is_teacher = _check_offering_read_access(
+            db,
+            offering_id=stored.assignment.subject_offering_id,
+            user_id=actor_user_id,
+        )
+        if not is_teacher and stored.assignment.status != "published":
+            raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
+    elif stored.submission_id is not None and stored.submission is not None:
+        assignment = stored.submission.assignment
+        if assignment is None:
+            raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
+        _offering, is_teacher = _check_offering_read_access(
+            db,
+            offering_id=assignment.subject_offering_id,
+            user_id=actor_user_id,
+        )
+        # Only assigned teachers or the owning student may download submission files
+        if not is_teacher and stored.submission.student_user_id != actor_user_id:
+            raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
+    else:
         raise AppError(403, "FORBIDDEN", "You do not have permission to download this file.")
 
     path = resolve_stored_file_path(

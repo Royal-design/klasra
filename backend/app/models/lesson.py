@@ -60,6 +60,12 @@ class StoredFile(Base):
     lesson_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("lessons.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("assignments.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    submission_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     storage_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     content_type: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -69,4 +75,6 @@ class StoredFile(Base):
         DateTime(timezone=True), nullable=False, default=utcnow
     )
 
-    lesson = relationship("Lesson", back_populates="attachments", lazy="joined")
+    lesson = relationship("Lesson", back_populates="attachments", foreign_keys=[lesson_id], lazy="joined")
+    assignment = relationship("Assignment", back_populates="attachments", foreign_keys=[assignment_id], lazy="joined")
+    submission = relationship("Submission", back_populates="attachments", foreign_keys=[submission_id], lazy="joined")

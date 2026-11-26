@@ -8,6 +8,7 @@ from app.models.academic import (
     Term,
     YearLevel,
 )
+from app.models.assignment import Assignment, Submission
 from app.models.audit import AuditEvent
 from app.models.guardian import GuardianLink
 from app.models.lesson import Lesson, StoredFile
@@ -21,6 +22,7 @@ from app.models.user import User
 
 __all__ = [
     "AcademicYear",
+    "Assignment",
     "AuditEvent",
     "ClassGroup",
     "Enrollment",
@@ -36,6 +38,7 @@ __all__ = [
     "StudentRegistrationRequest",
     "Subject",
     "SubjectOffering",
+    "Submission",
     "Term",
     "User",
     "UserSession",

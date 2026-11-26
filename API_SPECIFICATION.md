@@ -182,20 +182,22 @@ Attachments enforce allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.
 | `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments` | Assigned Teacher | Yes | Upload an allow-listed learning material attachment (`multipart/form-data`, audited). |
 | `GET` | `/api/v1/files/{file_id}/download` | Assigned Teacher, Enrolled Student | No | Stream authorized file attachment (students blocked from draft lesson files; parents/outsiders blocked `403`). |
 
+### Assignments & Submissions (Slice 7 — `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03`)
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/offerings/{offering_id}/assignments` | Assigned Teacher | Yes | Create a `draft` or `published` assignment with `due_at`, `max_score`, `allow_late_submissions`, and `allow_resubmissions` (audited). |
+| `GET` | `/api/v1/offerings/{offering_id}/assignments` | Assigned Teacher, Enrolled Student | No | List assignments (paginated, `?status=&q=`). Students see **published only**. |
+| `PATCH` | `/api/v1/offerings/{offering_id}/assignments/{assignment_id}` | Assigned Teacher | Yes | Update assignment instructions, policy, or publish status (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/assignments/{assignment_id}/attachments` | Assigned Teacher | Yes | Upload an allow-listed attachment to an assignment (`multipart/form-data`, audited). |
+| `POST` | `/api/v1/assignments/{assignment_id}/submissions` | Enrolled Student | Yes | Submit typed `text_content` and/or `files` (`multipart/form-data`). Enforces late/resubmission rules (`409`) and retains full `version_number` history (audited). |
+| `GET` | `/api/v1/assignments/{assignment_id}/submissions` | Assigned Teacher, Enrolled Student (own) | No | List submissions (paginated, `?student_user_id=&latest_only=`). Students see **only their own** history. |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 7 — Assignments & Submissions (`ASSIGN-01`..`ASSIGN-03`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `POST` / `PATCH` | `/api/v1/offerings/{offering_id}/assignments` | Assigned Teacher | Create/update assignments |
-| `GET` | `/api/v1/offerings/{offering_id}/assignments` | Assigned Teacher, Enrolled Student | List assignments |
-| `POST` | `/api/v1/assignments/{assignment_id}/submissions` | Enrolled Student | Submit text and/or allowed files (tracks history) |
-| `GET` | `/api/v1/assignments/{assignment_id}/submissions` | Assigned Teacher, Enrolled Student (own) | View submissions |
 
 ### Slice 8 — Grades, Feedback & Progress (`ASSIGN-04`, `PROG-01`, `PROG-02`)
 
