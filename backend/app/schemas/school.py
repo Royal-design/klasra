@@ -31,6 +31,7 @@ class SchoolCreateRequest(BaseModel):
 class SchoolUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=200)
     status: Literal["active", "suspended"] | None = None
+    terminology_config: dict[str, str] | None = None
 
 
 class SchoolResponse(BaseModel):
@@ -40,6 +41,7 @@ class SchoolResponse(BaseModel):
     name: str
     slug: str
     status: str
+    terminology_config: dict[str, str] = {}
     created_at: datetime
     updated_at: datetime
 

@@ -10,8 +10,8 @@
 | --- | --- | --- | --- | --- |
 | **1** | FastAPI foundation, config, PostgreSQL SQLAlchemy, Alembic, `/api/v1/health` | Foundation | **Done** | 3/3 `pytest` tests passing; live PostgreSQL (`lms`) verified `200 OK`; Alembic `1.20.1` configured |
 | **2** | Schools, accounts, auth, memberships, roles, school-scoped authorization | `SCH-01`, `AUTH-01`, `AUTH-03`, `AUTH-05`, `AUTH-06` | **Done** | 7/7 `pytest` tests passing; migration `0001_slice2_auth_schools` applied to PostgreSQL `lms` |
-| **3** | Academic years, terms, class groups, subjects, offerings, enrollments, spreadsheet import | `SCH-02`, `SCH-03`, `SCH-04`, `SCH-05` | Not Started | Next up |
-| **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | Not Started | Blocked on Open Decision #2 |
+| **3** | Academic years, terms, class groups, subjects, offerings, enrollments, spreadsheet import | `SCH-02`, `SCH-03`, `SCH-04`, `SCH-05` | **Done** | 9/9 `pytest` tests passing; migration `0002_slice3_academic_structure` applied to PostgreSQL `lms` |
+| **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | Not Started | Next up (confirm Open Decision #2) |
 | **5** | Parent invitations, verification, approval & multi-school child links | `AUTH-04`, `AUTH-06` | Not Started | Email provider decided (**Resend**); SMS/in-app optional |
 | **6** | Lessons & secure file storage | `LEARN-01` | Not Started | Blocked on Open Decision #5 |
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Blocked on Open Decisions #4, #5 |
@@ -24,10 +24,10 @@
 | Requirement ID | Description | Status | Slice |
 | --- | --- | --- | --- |
 | `SCH-01` | Platform admin creates and manages schools | **Done** | 2 |
-| `SCH-02` | School admin manages academic years and terms | Not Started | 3 |
-| `SCH-03` | School admin configures year levels, class groups, subjects, teacher assignments | Not Started | 3 |
-| `SCH-04` | School admin enrolls, transfers, withdraws students preserving history | Not Started | 3 |
-| `SCH-05` | School admin imports students/staff from spreadsheet with validation | Not Started | 3 |
+| `SCH-02` | School admin manages academic years and terms | **Done** | 3 |
+| `SCH-03` | School admin configures year levels, class groups, subjects, teacher assignments | **Done** | 3 |
+| `SCH-04` | School admin enrolls, transfers, withdraws students preserving history | **Done** | 3 |
+| `SCH-05` | School admin imports students/staff from spreadsheet with validation | **Done** | 3 |
 | `AUTH-01` | School admin creates accounts and assigns roles within their school | **Done** | 2 |
 | `AUTH-02` | Student self-registration remains pending until school admin approval | Not Started | 4 |
 | `AUTH-03` | Teacher associated with only one school | **Done** | 2 |
@@ -63,8 +63,15 @@
 - Added CLI bootstrap (`python -m app.cli create-platform-admin`).
 - Verified with `pytest -v` (7 passed).
 
-## 4. Next Up — Slice 3 Checklist
+### Slice 3 — Academic Structure, Enrollments & Bulk Import
+- Added `terminology_config` on `schools` and 8 school-scoped models (`academic_years`, `terms`, `year_levels`, `class_groups`, `subjects`, `subject_offerings`, `offering_teachers`, `enrollments`).
+- Created and applied Alembic migration `0002_slice3_academic_structure` to PostgreSQL `lms`.
+- Implemented `app/repositories/academic_repo.py`, `app/services/academic.py`, `app/services/imports.py`, and routers `app/api/v1/academic.py` & `app/api/v1/imports.py`.
+- Implemented history-preserving student enrollment, transfer, and withdrawal (`SCH-04`) with audit events.
+- Implemented secure CSV & XLSX bulk import (`SCH-05`) with 5 MB limit, magic-byte check, `defusedxml`-protected `openpyxl` parsing, dry-run validation, and atomic commit.
+- Verified with `pytest -v` (9 passed).
 
-Before starting Slice 3 (Academic Structure, Enrollments & Spreadsheet Import):
-- Confirm Open Decision #3 (configurable school terminology labels such as Year/Form/Grade — default labels vs. per-school custom labels).
-- Confirm supported spreadsheet formats for bulk import (`CSV` and/or `XLSX`).
+## 4. Next Up — Slice 4 Checklist
+
+Before starting Slice 4 (Student Self-Registration & Approval — `AUTH-02`, `AUTH-06`):
+- Confirm Open Decision #2: should students register using a **short-lived school registration code**, a **school-issued invitation**, or **either**? (Also wires the Resend email adapter for approval/rejection notifications.)

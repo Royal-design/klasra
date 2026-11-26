@@ -92,13 +92,16 @@ def update_school(
             message="School not found.",
         )
 
-    changes: dict[str, str] = {}
+    changes: dict[str, object] = {}
     if payload.name is not None:
         school.name = payload.name.strip()
         changes["name"] = school.name
     if payload.status is not None:
         school.status = payload.status
         changes["status"] = school.status
+    if payload.terminology_config is not None:
+        school.terminology_config = payload.terminology_config
+        changes["terminology_config"] = school.terminology_config
 
     if changes:
         record_audit_event(

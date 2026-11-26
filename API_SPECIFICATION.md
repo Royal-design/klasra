@@ -89,25 +89,37 @@ This document specifies the HTTP API exposed by `backend/` for the planned Next.
 | `GET` | `/api/v1/schools/{school_id}/users` | School Admin of `{school_id}` | No | List users and memberships strictly scoped to `{school_id}`. |
 | `PATCH` | `/api/v1/schools/{school_id}/memberships/{membership_id}` | School Admin of `{school_id}` | Yes | Update role or status (`pending` / `active` / `revoked`). Prevents removing/demoting the last active `school_admin` (`409 LAST_SCHOOL_ADMIN`), enforces `AUTH-03`, invalidates user sessions on revocation, and records an audit event. |
 
+### Academic Structure, Offerings & Enrollments — School Admin (Slice 3 — `SCH-02`, `SCH-03`, `SCH-04`)
+
+All endpoints below require an active **`school_admin`** membership in `{school_id}` (+ `X-CSRF-Token` on `POST`/`PATCH`). Cross-school references fail closed (`403` / `404` / `422`).
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/academic-years` (`/{academic_year_id}`) | Create, list, and update academic years (`end_date > start_date`, unique name per school). |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/terms` (`/{term_id}`) | Create, list (optional `?academic_year_id=`), and update terms (must fall inside academic year dates). |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/year-levels` (`/{year_level_id}`) | Create, list, and update year levels/forms (`display_order`). |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/class-groups` (`/{class_group_id}`) | Create, list (optional `?academic_year_id=`), and update class groups/sections. |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subjects` (`/{subject_id}`) | Create, list, and update subjects (unique uppercase `code` per school). |
+| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subject-offerings` (`/{offering_id}`) | Create, list (optional `?class_group_id=`), and update subject offerings with initial active teachers. |
+| `POST` | `/api/v1/schools/{school_id}/subject-offerings/{offering_id}/teachers` | Assign an active school teacher to a subject offering (audited). |
+| `POST` / `GET` | `/api/v1/schools/{school_id}/enrollments` | Enroll an active school student into a class group (and optional subject offering); list enrollments with filters (`student_user_id`, `class_group_id`, `status`). |
+| `POST` | `/api/v1/schools/{school_id}/enrollments/{enrollment_id}/transfer` | Mark active enrollment `transferred` with `effective_to` and create a new `active` enrollment row (history preserved, audited). |
+| `POST` | `/api/v1/schools/{school_id}/enrollments/{enrollment_id}/withdraw` | Mark active enrollment `withdrawn` with `effective_to` (history preserved, audited). |
+
+### Bulk Spreadsheet Import — School Admin (Slice 3 — `SCH-05`)
+
+Accepts `multipart/form-data` (`file`: `.csv` UTF-8 or `.xlsx` verified via `PK\x03\x04` magic bytes + `defusedxml`, max 5 MB). Required columns: `email`, `full_name`, `role` (`teacher` or `student`; admin roles rejected). Optional columns for students: `academic_year`, `class_group`.
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/schools/{school_id}/imports/validate` | School Admin | Yes | Dry-run validate spreadsheet and return row-level errors + preview without writing to DB. |
+| `POST` | `/api/v1/schools/{school_id}/imports/commit` | School Admin | Yes | Validate and atomically commit users, memberships, and optional student enrollments (audited). Rejects with `422 IMPORT_VALIDATION_FAILED` if any row has errors. |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 3 — Academic Structure, Enrollments & Import (`SCH-02`..`SCH-05`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/academic-years` | School Admin | Manage academic years |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/terms` | School Admin | Manage terms within an academic year |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/year-levels` | School Admin | Manage year levels/forms |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/class-groups` | School Admin | Manage class groups/sections |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subjects` | School Admin | Manage subjects |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subject-offerings` | School Admin | Assign subjects & teachers to class groups |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/enrollments` | School Admin | Enroll, transfer, or withdraw students (history preserved) |
-| `POST` | `/api/v1/schools/{school_id}/imports/validate` | School Admin | Dry-run spreadsheet validation and error report |
-| `POST` | `/api/v1/schools/{school_id}/imports/commit` | School Admin | Commit validated student/staff import |
 
 ### Slice 4 — Student Self-Registration (`AUTH-02`, `AUTH-06`)
 
