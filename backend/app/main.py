@@ -7,9 +7,13 @@ from app.api.v1.router import api_router
 from app.core.config import Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.rate_limit import SlidingWindowRateLimiter
+from app.services.email import EmailProvider, build_email_provider
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    email_provider: EmailProvider | None = None,
+) -> FastAPI:
     app_settings = settings or get_settings()
 
     # Disable interactive OpenAPI docs in production by default.
@@ -25,13 +29,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=openapi_url,
     )
     app.state.settings = app_settings
+    app.state.email_provider = email_provider or build_email_provider(app_settings)
 
     register_exception_handlers(app)
 
     rate_limiter = SlidingWindowRateLimiter(
         general_limit=app_settings.rate_limit_per_minute,
-        login_limit=app_settings.login_rate_limit_per_minute,
-        login_path=f"{app_settings.api_v1_prefix}/auth/login",
+        auth_limit=app_settings.login_rate_limit_per_minute,
+        strict_auth_paths={
+            f"{app_settings.api_v1_prefix}/auth/login",
+            f"{app_settings.api_v1_prefix}/auth/forgot-password",
+            f"{app_settings.api_v1_prefix}/auth/reset-password",
+        },
     )
 
     app.add_middleware(

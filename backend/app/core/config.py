@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     # Session & cookie hardening
     session_ttl_hours: int = 12
+    password_reset_ttl_minutes: int = 30
     cookie_secure: bool = True
 
     # Rate limiting (per IP per minute)
@@ -41,6 +42,19 @@ class Settings(BaseSettings):
     resend_api_key: str | None = None
     email_from: str | None = None
     frontend_base_url: str = "http://localhost:3000"
+
+    @model_validator(mode="after")
+    def validate_email_provider_settings(self) -> "Settings":
+        if self.email_provider == "resend":
+            if not self.resend_api_key or not self.resend_api_key.strip():
+                raise ValueError(
+                    "RESEND_API_KEY is required when EMAIL_PROVIDER is set to 'resend'."
+                )
+            if not self.email_from or not self.email_from.strip():
+                raise ValueError(
+                    "EMAIL_FROM is required when EMAIL_PROVIDER is set to 'resend'."
+                )
+        return self
 
     @field_validator("cors_origins")
     @classmethod

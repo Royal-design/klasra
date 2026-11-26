@@ -65,13 +65,18 @@ This document specifies the HTTP API exposed by `backend/` for the planned Next.
     }
     ```
 
-### Authentication (Slice 2)
+### Authentication (Slice 2 + Password Recovery)
 
 | Method | Path | Access | CSRF Required | Description |
 | --- | --- | --- | --- | --- |
 | `POST` | `/api/v1/auth/login` | Public (strict rate limit) | No | Verify email & Argon2id password, set `HttpOnly` session cookie + CSRF cookie, return `user` + `csrf_token`. |
 | `POST` | `/api/v1/auth/logout` | Authenticated | Yes | Invalidate all active sessions for the current user and clear cookies (`204 No Content`). |
 | `GET` | `/api/v1/auth/me` | Authenticated | No | Return current user profile and school memberships. |
+| `POST` | `/api/v1/auth/forgot-password` | Public (strict rate limit) | No | Always returns generic `200 OK` (no email enumeration). Creates a 30-minute single-use hashed token and emails a reset link via Resend (`EMAIL_PROVIDER=resend`). |
+| `POST` | `/api/v1/auth/reset-password` | Public (strict rate limit) | No | Consumes single-use reset token (`410 Gone` if invalid/expired/used), updates Argon2id password, and revokes all active sessions (audited). |
+| `POST` | `/api/v1/auth/change-password` | Authenticated | Yes | Verifies current password, updates Argon2id password, revokes all active sessions, and clears cookies (audited). |
+
+> **Swagger UI (`/docs`) testing:** Run `POST /api/v1/auth/login` first (your browser automatically stores the session cookie when `COOKIE_SECURE=false` locally), then click **Authorize** and paste the `csrf_token` into `CSRFToken` (`X-CSRF-Token`).
 
 ### Schools — Platform Admin (Slice 2 — `SCH-01`, `AUTH-06`)
 

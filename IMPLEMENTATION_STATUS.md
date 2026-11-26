@@ -63,6 +63,12 @@
 - Added CLI bootstrap (`python -m app.cli create-platform-admin`).
 - Verified with `pytest -v` (7 passed).
 
+### Slice 2b — Password Recovery, Resend Email Adapter & Swagger CSRF Authorize
+- Added `APIKeyHeader(name="X-CSRF-Token")` OpenAPI security scheme so Swagger UI (`/docs`) displays an **Authorize** button for write requests.
+- Implemented `app/services/email.py` (`ResendEmailProvider`, `ConsoleEmailProvider`, `InMemoryEmailProvider`) with fail-fast config validation when `EMAIL_PROVIDER=resend`.
+- Added `password_reset_tokens` model, repository, and Alembic migration `0003_password_reset_tokens`.
+- Implemented `POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password`, and `POST /api/v1/auth/change-password` with strict rate limiting, single-use hashed tokens, session invalidation, and audit logging.
+
 ### Slice 3 — Academic Structure, Enrollments & Bulk Import
 - Added `terminology_config` on `schools` and 8 school-scoped models (`academic_years`, `terms`, `year_levels`, `class_groups`, `subjects`, `subject_offerings`, `offering_teachers`, `enrollments`).
 - Created and applied Alembic migration `0002_slice3_academic_structure` to PostgreSQL `lms`.

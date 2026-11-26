@@ -2,7 +2,8 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, Security
+from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -15,6 +16,15 @@ from app.models.session import UserSession
 from app.models.user import User
 from app.repositories import membership_repo, school_repo
 from app.services.auth import get_active_session_and_user
+from app.services.email import EmailProvider
+
+# Exposes an "Authorize" input in Swagger UI for X-CSRF-Token on write endpoints.
+csrf_header_scheme = APIKeyHeader(
+    name="X-CSRF-Token",
+    scheme_name="CSRFToken",
+    description="Paste the csrf_token returned by POST /api/v1/auth/login.",
+    auto_error=False,
+)
 
 
 @dataclass
@@ -35,6 +45,10 @@ def get_app_settings(request: Request) -> Settings:
     return request.app.state.settings
 
 
+def get_email_provider(request: Request) -> EmailProvider:
+    return request.app.state.email_provider
+
+
 def get_current_auth(
     request: Request,
     db: Session = Depends(get_db),
@@ -53,13 +67,13 @@ def get_current_auth(
 
 def verify_csrf(
     request: Request,
+    header_token: str | None = Security(csrf_header_scheme),
     auth: AuthContext = Depends(get_current_auth),
 ) -> AuthContext:
     """Validate X-CSRF-Token header against the session's stored CSRF token hash."""
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return auth
 
-    header_token = request.headers.get("X-CSRF-Token")
     if not header_token or not constant_time_equals(
         auth.session.csrf_token_hash, header_token
     ):
