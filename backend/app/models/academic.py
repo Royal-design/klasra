@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, Uuid
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -56,6 +56,8 @@ class Term(Base):
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
 
+    academic_year = relationship("AcademicYear", lazy="joined")
+
 
 class YearLevel(Base):
     __tablename__ = "year_levels"
@@ -102,6 +104,9 @@ class ClassGroup(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
+
+    academic_year = relationship("AcademicYear", lazy="joined")
+    year_level = relationship("YearLevel", lazy="joined")
 
 
 class Subject(Base):
@@ -157,6 +162,11 @@ class SubjectOffering(Base):
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
 
+    class_group = relationship("ClassGroup", lazy="joined")
+    subject = relationship("Subject", lazy="joined")
+    term = relationship("Term", lazy="joined")
+    teacher_assignments = relationship("OfferingTeacher", lazy="selectin")
+
 
 class OfferingTeacher(Base):
     __tablename__ = "offering_teachers"
@@ -182,6 +192,8 @@ class OfferingTeacher(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow
     )
+
+    teacher = relationship("User", lazy="joined")
 
 
 class Enrollment(Base):
@@ -215,3 +227,8 @@ class Enrollment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
+
+    student = relationship("User", lazy="joined")
+    academic_year = relationship("AcademicYear", lazy="joined")
+    class_group = relationship("ClassGroup", lazy="joined")
+    subject_offering = relationship("SubjectOffering", lazy="joined")

@@ -19,6 +19,7 @@ from app.schemas.academic import (
     EnrollmentTransferResponse,
     EnrollmentWithdrawRequest,
     OfferingTeacherAssignRequest,
+    OfferingTeacherSummary,
     SubjectCreateRequest,
     SubjectOfferingCreateRequest,
     SubjectOfferingResponse,
@@ -45,17 +46,83 @@ router = APIRouter(prefix="/schools/{school_id}", tags=["academic"])
 require_school_admin = require_school_role({"school_admin"})
 
 
+def _to_term_response(term) -> TermResponse:
+    return TermResponse(
+        id=term.id,
+        school_id=term.school_id,
+        academic_year_id=term.academic_year_id,
+        academic_year_name=term.academic_year.name if term.academic_year else None,
+        name=term.name,
+        start_date=term.start_date,
+        end_date=term.end_date,
+        created_at=term.created_at,
+        updated_at=term.updated_at,
+    )
+
+
+def _to_class_group_response(group) -> ClassGroupResponse:
+    return ClassGroupResponse(
+        id=group.id,
+        school_id=group.school_id,
+        academic_year_id=group.academic_year_id,
+        academic_year_name=group.academic_year.name if group.academic_year else None,
+        year_level_id=group.year_level_id,
+        year_level_name=group.year_level.name if group.year_level else None,
+        name=group.name,
+        created_at=group.created_at,
+        updated_at=group.updated_at,
+    )
+
+
 def _to_offering_response(offering, teacher_ids: list[uuid.UUID]) -> SubjectOfferingResponse:
+    teachers = [
+        OfferingTeacherSummary(
+            user_id=assignment.teacher_user_id,
+            full_name=assignment.teacher.full_name,
+            email=assignment.teacher.email,
+        )
+        for assignment in (offering.teacher_assignments or [])
+        if assignment.teacher is not None
+    ]
     return SubjectOfferingResponse(
         id=offering.id,
         school_id=offering.school_id,
         class_group_id=offering.class_group_id,
+        class_group_name=offering.class_group.name if offering.class_group else None,
         subject_id=offering.subject_id,
+        subject_code=offering.subject.code if offering.subject else None,
+        subject_name=offering.subject.name if offering.subject else None,
         term_id=offering.term_id,
+        term_name=offering.term.name if offering.term else None,
         status=offering.status,
         teacher_user_ids=teacher_ids,
+        teachers=teachers,
         created_at=offering.created_at,
         updated_at=offering.updated_at,
+    )
+
+
+def _to_enrollment_response(enrollment) -> EnrollmentResponse:
+    subject_name = None
+    if enrollment.subject_offering is not None and enrollment.subject_offering.subject is not None:
+        subject_name = enrollment.subject_offering.subject.name
+    return EnrollmentResponse(
+        id=enrollment.id,
+        school_id=enrollment.school_id,
+        student_user_id=enrollment.student_user_id,
+        student_full_name=enrollment.student.full_name if enrollment.student else None,
+        student_email=enrollment.student.email if enrollment.student else None,
+        academic_year_id=enrollment.academic_year_id,
+        academic_year_name=enrollment.academic_year.name if enrollment.academic_year else None,
+        class_group_id=enrollment.class_group_id,
+        class_group_name=enrollment.class_group.name if enrollment.class_group else None,
+        subject_offering_id=enrollment.subject_offering_id,
+        subject_name=subject_name,
+        status=enrollment.status,
+        effective_from=enrollment.effective_from,
+        effective_to=enrollment.effective_to,
+        created_at=enrollment.created_at,
+        updated_at=enrollment.updated_at,
     )
 
 
@@ -139,7 +206,7 @@ def create_term_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return TermResponse.model_validate(term)
+    return _to_term_response(term)
 
 
 @router.get("/terms", response_model=PaginatedResponse[TermResponse])
@@ -159,7 +226,7 @@ def list_terms_endpoint(
         limit=pagination.page_size,
     )
     return build_paginated_response(
-        [TermResponse.model_validate(t) for t in terms],
+        [_to_term_response(t) for t in terms],
         total=total,
         pagination=pagination,
     )
@@ -179,7 +246,7 @@ def update_term_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return TermResponse.model_validate(term)
+    return _to_term_response(term)
 
 
 # --- Year Levels ---
@@ -257,7 +324,7 @@ def create_class_group_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return ClassGroupResponse.model_validate(group)
+    return _to_class_group_response(group)
 
 
 @router.get("/class-groups", response_model=PaginatedResponse[ClassGroupResponse])
@@ -279,7 +346,7 @@ def list_class_groups_endpoint(
         limit=pagination.page_size,
     )
     return build_paginated_response(
-        [ClassGroupResponse.model_validate(g) for g in groups],
+        [_to_class_group_response(g) for g in groups],
         total=total,
         pagination=pagination,
     )
@@ -299,7 +366,7 @@ def update_class_group_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return ClassGroupResponse.model_validate(group)
+    return _to_class_group_response(group)
 
 
 # --- Subjects ---
@@ -470,7 +537,7 @@ def create_enrollment_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return EnrollmentResponse.model_validate(enrollment)
+    return _to_enrollment_response(enrollment)
 
 
 @router.get("/enrollments", response_model=PaginatedResponse[EnrollmentResponse])
@@ -494,7 +561,7 @@ def list_enrollments_endpoint(
         limit=pagination.page_size,
     )
     return build_paginated_response(
-        [EnrollmentResponse.model_validate(r) for r in rows],
+        [_to_enrollment_response(r) for r in rows],
         total=total,
         pagination=pagination,
     )
@@ -518,8 +585,8 @@ def transfer_enrollment_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return EnrollmentTransferResponse(
-        previous_enrollment=EnrollmentResponse.model_validate(previous),
-        new_enrollment=EnrollmentResponse.model_validate(new),
+        previous_enrollment=_to_enrollment_response(previous),
+        new_enrollment=_to_enrollment_response(new),
     )
 
 
@@ -540,4 +607,4 @@ def withdraw_enrollment_endpoint(
         payload=payload,
         actor_user_id=school_auth.user.id,
     )
-    return EnrollmentResponse.model_validate(enrollment)
+    return _to_enrollment_response(enrollment)

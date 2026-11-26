@@ -13,6 +13,8 @@ class MembershipSummary(BaseModel):
 
     id: uuid.UUID
     school_id: uuid.UUID
+    school_name: str | None = None
+    school_slug: str | None = None
     role: str
     status: str
 

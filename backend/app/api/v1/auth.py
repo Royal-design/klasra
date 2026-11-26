@@ -42,7 +42,17 @@ def _build_user_profile(db: Session, user) -> UserProfile:
         full_name=user.full_name,
         is_platform_admin=user.is_platform_admin,
         is_active=user.is_active,
-        memberships=[MembershipSummary.model_validate(m) for m in memberships],
+        memberships=[
+            MembershipSummary(
+                id=m.id,
+                school_id=m.school_id,
+                school_name=m.school.name if m.school else None,
+                school_slug=m.school.slug if m.school else None,
+                role=m.role,
+                status=m.status,
+            )
+            for m in memberships
+        ],
     )
 
 

@@ -227,6 +227,16 @@ def test_academic_hierarchy_cross_school_isolation_and_enrollments(
     )
     assert offering_resp.status_code == 201
     assert offering_resp.json()["teacher_user_ids"] == [teacher_a]
+    assert offering_resp.json()["class_group_name"] == "Year 8 Blue"
+    assert offering_resp.json()["subject_code"] == "MATH"
+    assert offering_resp.json()["subject_name"] == "Mathematics"
+    assert offering_resp.json()["term_name"] == "Term 1"
+    assert offering_resp.json()["teachers"][0]["full_name"] == "Mr. Bello"
+
+    # Verify enriched class-groups response avoids extra frontend calls
+    groups_list = client.get(f"/api/v1/schools/{school_a}/class-groups").json()
+    assert groups_list["items"][0]["academic_year_name"] == "2026-2027"
+    assert groups_list["items"][0]["year_level_name"] == "Year 8"
 
     # SCH-04: Enroll -> Transfer (history preserved) -> Withdraw
     enroll_resp = client.post(
@@ -239,6 +249,9 @@ def test_academic_hierarchy_cross_school_isolation_and_enrollments(
         },
     )
     assert enroll_resp.status_code == 201
+    assert enroll_resp.json()["student_full_name"] == "Chidi Okafor"
+    assert enroll_resp.json()["class_group_name"] == "Year 8 Blue"
+    assert enroll_resp.json()["academic_year_name"] == "2026-2027"
     enroll_id = enroll_resp.json()["id"]
 
     transfer_resp = client.post(

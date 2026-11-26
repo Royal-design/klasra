@@ -64,6 +64,7 @@ class TermResponse(BaseModel):
     id: uuid.UUID
     school_id: uuid.UUID
     academic_year_id: uuid.UUID
+    academic_year_name: str | None = None
     name: str
     start_date: date
     end_date: date
@@ -110,7 +111,9 @@ class ClassGroupResponse(BaseModel):
     id: uuid.UUID
     school_id: uuid.UUID
     academic_year_id: uuid.UUID
+    academic_year_name: str | None = None
     year_level_id: uuid.UUID
+    year_level_name: str | None = None
     name: str
     created_at: datetime
     updated_at: datetime
@@ -153,16 +156,27 @@ class OfferingTeacherAssignRequest(BaseModel):
     teacher_user_id: uuid.UUID
 
 
+class OfferingTeacherSummary(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    email: str
+
+
 class SubjectOfferingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     school_id: uuid.UUID
     class_group_id: uuid.UUID
+    class_group_name: str | None = None
     subject_id: uuid.UUID
+    subject_code: str | None = None
+    subject_name: str | None = None
     term_id: uuid.UUID | None
+    term_name: str | None = None
     status: str
     teacher_user_ids: list[uuid.UUID] = []
+    teachers: list[OfferingTeacherSummary] = []
     created_at: datetime
     updated_at: datetime
 
@@ -191,9 +205,14 @@ class EnrollmentResponse(BaseModel):
     id: uuid.UUID
     school_id: uuid.UUID
     student_user_id: uuid.UUID
+    student_full_name: str | None = None
+    student_email: str | None = None
     academic_year_id: uuid.UUID
+    academic_year_name: str | None = None
     class_group_id: uuid.UUID
+    class_group_name: str | None = None
     subject_offering_id: uuid.UUID | None
+    subject_name: str | None = None
     status: str
     effective_from: date
     effective_to: date | None
