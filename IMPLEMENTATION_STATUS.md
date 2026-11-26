@@ -12,8 +12,8 @@
 | **2** | Schools, accounts, auth, memberships, roles, school-scoped authorization | `SCH-01`, `AUTH-01`, `AUTH-03`, `AUTH-05`, `AUTH-06` | **Done** | 7/7 `pytest` tests passing; migration `0001_slice2_auth_schools` applied to PostgreSQL `lms` |
 | **3** | Academic years, terms, class groups, subjects, offerings, enrollments, spreadsheet import | `SCH-02`, `SCH-03`, `SCH-04`, `SCH-05` | **Done** | 9/9 `pytest` tests passing; migration `0002_slice3_academic_structure` applied to PostgreSQL `lms` |
 | **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | **Done** | 15/15 `pytest` tests passing; migration `0004_slice4_student_registration` applied to PostgreSQL `lms` |
-| **5** | Parent invitations, verification, approval & multi-school child links | `AUTH-04`, `AUTH-06` | Not Started | Next up |
-| **6** | Lessons & secure file storage | `LEARN-01` | Not Started | Blocked on Open Decision #5 |
+| **5** | Parent invitations, verification, approval & multi-school child links (+ staff email activation) | `AUTH-04`, `AUTH-06` | **Done** | 18/18 `pytest` tests passing; migrations `0005_staff_invitations` & `0006_slice5_guardian_links` applied to PostgreSQL `lms` |
+| **6** | Lessons & secure file storage | `LEARN-01` | Not Started | Next up (confirm Open Decision #5: allowed file types & max upload size) |
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Blocked on Open Decisions #4, #5 |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decisions #3, #7 |
 | **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decision #6 |
@@ -31,9 +31,9 @@
 | `AUTH-01` | School admin creates accounts and assigns roles within their school | **Done** | 2 |
 | `AUTH-02` | Student self-registration remains pending until school admin approval | **Done** | 4 |
 | `AUTH-03` | Teacher associated with only one school | **Done** | 2 |
-| `AUTH-04` | Parent account linked to multiple students across multiple schools | Not Started | 5 |
-| `AUTH-05` | Every protected operation checks role and school/resource assignment | **Done** (Slice 2 scope; extends per slice) | 2 |
-| `AUTH-06` | Audit trail for admin decisions, role, enrollment, and guardian link changes | **In Progress** (school/membership/admin bootstrap done) | 2–5 |
+| `AUTH-04` | Parent account linked to multiple students across multiple schools | **Done** | 5 |
+| `AUTH-05` | Every protected operation checks role and school/resource assignment | **Done** (Slices 2–5 scope; extends per slice) | 2 |
+| `AUTH-06` | Audit trail for admin decisions, role, enrollment, and guardian link changes | **Done** (extends to grades/attendance in Slices 8–9) | 2–5 |
 | `LEARN-01` | Teacher publishes lessons/materials to assigned subject offerings | Not Started | 6 |
 | `ASSIGN-01` | Teacher creates assignment for assigned subject offering | Not Started | 7 |
 | `ASSIGN-02` | Enrolled students submit typed text and file uploads | Not Started | 7 |
@@ -83,7 +83,12 @@
 - Implemented School Admin code generation, email invitation (via Resend), listing, approval (with optional class group enrollment + approval email), and rejection (revoking membership & sessions + rejection email), all audited.
 - Verified with `pytest -v` (15 passed).
 
-## 4. Next Up — Slice 5 Checklist
+### Slice 5 + Staff Invitations — Teacher Email Activation & Multi-School Guardian Linking
+- Added `staff_invitations` model, repository, service, router, and migration `0005_staff_invitations` so School Admins can invite teachers/admins by email to set their own password securely (enforcing `AUTH-03` single active school for teachers).
+- Added `guardian_links` model, repository, service, router, and migration `0006_slice5_guardian_links` implementing invite → email token verification (`pending_approval`) → School Admin approval/revocation → multi-school `GET /api/v1/parent/children` (`AUTH-04`, `AUTH-06`).
+- Verified with `pytest -v` (18 passed).
 
-Before starting Slice 5 (Parent/Guardian Linking & Multi-School Child Access — `AUTH-04`, `AUTH-06`):
-- Ready to proceed using our Resend email adapter for parent invitations, hashed single-use contact verification tokens, School Admin approval/revocation with audit trail, and `GET /api/v1/parent/children` across multiple schools.
+## 4. Next Up — Slice 6 Checklist
+
+Before starting Slice 6 (Lessons & Secure File Storage — `LEARN-01`):
+- Confirm Open Decision #5: allowed upload file types (recommended default: PDF, DOCX, PPTX, PNG, JPG, TXT) and max file size (recommended default: 10 MB per file), stored under random UUID filenames outside public web paths with authorized download streaming.

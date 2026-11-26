@@ -41,6 +41,8 @@ def create_app(
             f"{app_settings.api_v1_prefix}/auth/forgot-password",
             f"{app_settings.api_v1_prefix}/auth/reset-password",
             f"{app_settings.api_v1_prefix}/registrations/students",
+            f"{app_settings.api_v1_prefix}/staff-invitations/accept",
+            f"{app_settings.api_v1_prefix}/guardian-links/verify",
         },
     )
 

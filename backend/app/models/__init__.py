@@ -9,11 +9,13 @@ from app.models.academic import (
     YearLevel,
 )
 from app.models.audit import AuditEvent
+from app.models.guardian import GuardianLink
 from app.models.membership import SchoolMembership
 from app.models.password_reset import PasswordResetToken
 from app.models.registration import StudentInvite, StudentRegistrationRequest
 from app.models.school import School
 from app.models.session import UserSession
+from app.models.staff_invite import StaffInvitation
 from app.models.user import User
 
 __all__ = [
@@ -21,10 +23,12 @@ __all__ = [
     "AuditEvent",
     "ClassGroup",
     "Enrollment",
+    "GuardianLink",
     "OfferingTeacher",
     "PasswordResetToken",
     "School",
     "SchoolMembership",
+    "StaffInvitation",
     "StudentInvite",
     "StudentRegistrationRequest",
     "Subject",

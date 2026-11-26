@@ -149,21 +149,32 @@ Registration codes and email invitations identify a school cohort or invited stu
 | `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/approve` | School Admin | Yes | Approve a pending student registration, activate membership, optionally enroll into `class_group_id`, notify via Resend, and record audit event. |
 | `POST` | `/api/v1/schools/{school_id}/registrations/students/{request_id}/reject` | School Admin | Yes | Reject a pending registration, revoke membership & active sessions, notify via Resend, and record audit event. |
 
+### Staff/Teacher Email Invitations & Self-Activation (Slice 4b — `AUTH-01`, `AUTH-03`, `AUTH-06`)
+
+Teachers cannot self-register via open cohort codes. Instead, School Admins send single-use email invitations so staff can set their own passwords securely.
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/schools/{school_id}/staff-invitations` | School Admin | Yes | Create a single-use hashed staff invitation (`teacher` or `school_admin`), enforce `AUTH-03`, email activation link via Resend (audited). |
+| `GET` | `/api/v1/schools/{school_id}/staff-invitations` | School Admin | No | List staff invitations for `{school_id}` (paginated, `?q=`). |
+| `POST` | `/api/v1/staff-invitations/accept` | Public (strict rate limit) | No | Accept single-use staff invitation, set password (or verify existing account password), activate school membership (audited). |
+
+### Parent/Guardian Multi-School Linking (Slice 5 — `AUTH-04`, `AUTH-06`)
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/schools/{school_id}/guardian-links/invite` | School Admin | Yes | Record parent-student link and email single-use verification token via Resend (audited). |
+| `GET` | `/api/v1/schools/{school_id}/guardian-links` | School Admin | No | List guardian links for `{school_id}` (paginated, `?student_user_id=&status=&q=`). |
+| `POST` | `/api/v1/guardian-links/verify` | Public (strict rate limit) | No | Verify email token, create or link to existing single parent account (requiring existing password if account exists), transition to `pending_approval` (audited). |
+| `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/approve` | School Admin | Yes | Approve verified parent-student link and notify via Resend (audited). |
+| `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/revoke` | School Admin | Yes | Revoke parent-student link immediately and notify via Resend (audited). |
+| `GET` | `/api/v1/parent/children` | Authenticated Parent | No | List **only approved** linked children across all active schools (paginated, `?school_id=&q=`). |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 5 — Parent/Guardian Linking (`AUTH-04`, `AUTH-06`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `POST` | `/api/v1/schools/{school_id}/guardian-links/invite` | School Admin | Create parent link record and send invite |
-| `POST` | `/api/v1/guardian-links/verify` | Public / Parent | Verify contact token and link to parent account (pending approval) |
-| `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/approve` | School Admin | Approve parent/student link (audited) |
-| `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/revoke` | School Admin | Revoke parent/student link (audited) |
-| `GET` | `/api/v1/parent/children` | Parent | List approved linked children across all schools |
 
 ### Slice 6 — Lessons & File Storage (`LEARN-01`)
 
