@@ -16,8 +16,8 @@
 | **6** | Lessons & secure file storage | `LEARN-01` | **Done** | 19/19 `pytest` tests passing; migration `0007_slice6_lessons_and_files` applied to PostgreSQL `lms` |
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | **Done** | 20/20 `pytest` tests passing; migration `0008_slice7_assignments` applied to PostgreSQL `lms` |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | **Done** | 21/21 `pytest` tests passing; migration `0009_slice8_grades` applied to PostgreSQL `lms` |
-| **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Next up (confirm Open Decision #6: attendance statuses) |
-| **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Blocked on Open Decisions #1, #9 |
+| **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | **Done** | 22/22 `pytest` tests passing; migration `0010_slice9_attendance` applied to PostgreSQL `lms` |
+| **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Final slice (S3/R2 storage adapter, Redis rate limiter, TLS/mTLS, backups, NDPA privacy review) |
 
 ## 2. Requirement ID Coverage
 
@@ -39,10 +39,10 @@
 | `ASSIGN-02` | Enrolled students submit typed text and file uploads | **Done** | 7 |
 | `ASSIGN-03` | System records submission time and retains resubmission history | **Done** | 7 |
 | `ASSIGN-04` | Teacher reviews submissions and records grade and feedback | **Done** | 8 |
-| `PROG-01` | Student views only their own grades, attendance, and feedback | **In Progress** (grades & feedback done; attendance in Slice 9) | 8–9 |
-| `PROG-02` | Approved parent views only linked children's grades, attendance, and feedback | **In Progress** (grades & feedback done; attendance in Slice 9) | 8–9 |
-| `ATT-01` | Teacher records attendance for assigned offerings/classes | Not Started | 9 |
-| `ATT-02` | Attendance changes include responsible user and timestamp | Not Started | 9 |
+| `PROG-01` | Student views only their own grades, attendance, and feedback | **Done** | 8–9 |
+| `PROG-02` | Approved parent views only linked children's grades, attendance, and feedback | **Done** | 8–9 |
+| `ATT-01` | Teacher records attendance for assigned offerings/classes | **Done** | 9 |
+| `ATT-02` | Attendance changes include responsible user and timestamp | **Done** | 9 |
 
 ## 3. Completed Work Log
 
@@ -103,7 +103,14 @@
 - Implemented `PUT /api/v1/submissions/{id}/grade` (score bounds validation, `is_published` draft/publish visibility, audit logging on every create/update), `GET /api/v1/assignments/{id}/grades`, `GET /api/v1/students/me/grades` (`PROG-01`), and `GET /api/v1/parent/children/{id}/grades` (`PROG-02`).
 - Verified with `pytest -v` (21 passed).
 
-## 4. Next Up — Slice 9 Checklist
+### Slice 9 — Attendance Recording & Attribution History
+- Added `attendance_records` model, `app/repositories/attendance_repo.py`, `app/schemas/attendance.py`, `app/services/attendance.py`, `app/api/v1/attendance.py`, and migration `0010_slice9_attendance`.
+- Implemented `PUT /api/v1/offerings/{id}/attendance` (batch roll-call upsert with enrolled-student validation, `present|absent|late|excused`, staff attribution, and immutable audit trail), `GET /api/v1/offerings/{id}/attendance`, `GET /api/v1/students/me/attendance` (`PROG-01`), and `GET /api/v1/parent/children/{id}/attendance` (`PROG-02`).
+- Added S3-compatible storage environment variable placeholders to `backend/.env.example`.
+- Verified with `pytest -v` (22 passed).
 
-Before starting Slice 9 (Attendance & Attribution History — `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02`):
-- Confirm Open Decision #6: required attendance statuses (recommended default: `present`, `absent`, `late`, `excused`, with responsible user + timestamp attribution and full audit trail on changes).
+## 4. Next Up — Slice 10 & Next.js Frontend
+
+All 9 core backend domain slices (every `SCH-*`, `AUTH-*`, `LEARN-*`, `ASSIGN-*`, `PROG-*`, and `ATT-*` requirement) are **Done**! Next up:
+- **Slice 10:** Production hardening (S3/Cloudflare R2 storage adapter, Redis rate limiter, PostgreSQL TLS/mTLS, structured PII-safe logging, backup runbook, and NDPA 2023 privacy checklist).
+- **Frontend:** Scaffold the Next.js application in `frontend/` consuming `/api/v1`.

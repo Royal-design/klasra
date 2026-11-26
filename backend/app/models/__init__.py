@@ -9,6 +9,7 @@ from app.models.academic import (
     YearLevel,
 )
 from app.models.assignment import Assignment, Submission
+from app.models.attendance import AttendanceRecord
 from app.models.audit import AuditEvent
 from app.models.grade import Grade
 from app.models.guardian import GuardianLink
@@ -24,6 +25,7 @@ from app.models.user import User
 __all__ = [
     "AcademicYear",
     "Assignment",
+    "AttendanceRecord",
     "AuditEvent",
     "ClassGroup",
     "Enrollment",

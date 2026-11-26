@@ -202,17 +202,19 @@ Attachments enforce allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.
 | `GET` | `/api/v1/students/me/grades` | Student | No | View **only own published** grades and teacher feedback (paginated, `?subject_offering_id=&q=`). |
 | `GET` | `/api/v1/parent/children/{student_id}/grades` | Approved Parent | No | View **only approved child's published** grades and teacher feedback (paginated, `?q=`; `403` for unapproved/revoked/other students). |
 
+### Attendance & Attribution History (Slice 9 — `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02`)
+
+Allowed statuses: `present`, `absent`, `late`, `excused`. Every record and update stores `recorded_by_user_id`, `updated_by_user_id`, timestamps, and an immutable `audit_events` row.
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `PUT` | `/api/v1/offerings/{offering_id}/attendance` | Assigned Teacher | Yes | Batch record or update attendance for enrolled students on `attendance_date` (attributed + audited). |
+| `GET` | `/api/v1/offerings/{offering_id}/attendance` | Assigned Teacher, School Admin | No | List offering attendance records (paginated, `?attendance_date=&student_user_id=&status=`). |
+| `GET` | `/api/v1/students/me/attendance` | Student | No | View **only own** attendance history (paginated, `?subject_offering_id=&status=&date_from=&date_to=`). |
+| `GET` | `/api/v1/parent/children/{student_id}/attendance` | Approved Parent | No | View **only approved child's** attendance history (paginated, `?status=&date_from=&date_to=`; `403` otherwise). |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
-> Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 9 — Attendance (`ATT-01`, `ATT-02`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `PUT` | `/api/v1/offerings/{offering_id}/attendance` | Assigned Teacher | Record/update attendance for a date (attributed + timestamped) |
-| `GET` | `/api/v1/offerings/{offering_id}/attendance` | Assigned Teacher, School Admin | View class attendance records |
-| `GET` | `/api/v1/students/me/attendance` | Student | View own attendance history |
-| `GET` | `/api/v1/parent/children/{student_id}/attendance` | Approved Parent | View approved child's attendance history |
+> All core backend domain slices (Slices 1–9) are now implemented! Slice 10 covers production deployment hardening, S3/R2 storage adapter, backups, monitoring, and privacy review.
