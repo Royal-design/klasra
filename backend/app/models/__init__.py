@@ -10,6 +10,7 @@ from app.models.academic import (
 )
 from app.models.audit import AuditEvent
 from app.models.guardian import GuardianLink
+from app.models.lesson import Lesson, StoredFile
 from app.models.membership import SchoolMembership
 from app.models.password_reset import PasswordResetToken
 from app.models.registration import StudentInvite, StudentRegistrationRequest
@@ -24,11 +25,13 @@ __all__ = [
     "ClassGroup",
     "Enrollment",
     "GuardianLink",
+    "Lesson",
     "OfferingTeacher",
     "PasswordResetToken",
     "School",
     "SchoolMembership",
     "StaffInvitation",
+    "StoredFile",
     "StudentInvite",
     "StudentRegistrationRequest",
     "Subject",

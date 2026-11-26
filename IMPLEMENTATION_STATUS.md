@@ -13,8 +13,8 @@
 | **3** | Academic years, terms, class groups, subjects, offerings, enrollments, spreadsheet import | `SCH-02`, `SCH-03`, `SCH-04`, `SCH-05` | **Done** | 9/9 `pytest` tests passing; migration `0002_slice3_academic_structure` applied to PostgreSQL `lms` |
 | **4** | Student self-registration requests & admin approval | `AUTH-02`, `AUTH-06` | **Done** | 15/15 `pytest` tests passing; migration `0004_slice4_student_registration` applied to PostgreSQL `lms` |
 | **5** | Parent invitations, verification, approval & multi-school child links (+ staff email activation) | `AUTH-04`, `AUTH-06` | **Done** | 18/18 `pytest` tests passing; migrations `0005_staff_invitations` & `0006_slice5_guardian_links` applied to PostgreSQL `lms` |
-| **6** | Lessons & secure file storage | `LEARN-01` | Not Started | Next up (confirm Open Decision #5: allowed file types & max upload size) |
-| **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Blocked on Open Decisions #4, #5 |
+| **6** | Lessons & secure file storage | `LEARN-01` | **Done** | 19/19 `pytest` tests passing; migration `0007_slice6_lessons_and_files` applied to PostgreSQL `lms` |
+| **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | Not Started | Next up (confirm Open Decision #4: late & resubmission defaults) |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decisions #3, #7 |
 | **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decision #6 |
 | **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Blocked on Open Decisions #1, #9 |
@@ -34,7 +34,7 @@
 | `AUTH-04` | Parent account linked to multiple students across multiple schools | **Done** | 5 |
 | `AUTH-05` | Every protected operation checks role and school/resource assignment | **Done** (Slices 2–5 scope; extends per slice) | 2 |
 | `AUTH-06` | Audit trail for admin decisions, role, enrollment, and guardian link changes | **Done** (extends to grades/attendance in Slices 8–9) | 2–5 |
-| `LEARN-01` | Teacher publishes lessons/materials to assigned subject offerings | Not Started | 6 |
+| `LEARN-01` | Teacher publishes lessons/materials to assigned subject offerings | **Done** | 6 |
 | `ASSIGN-01` | Teacher creates assignment for assigned subject offering | Not Started | 7 |
 | `ASSIGN-02` | Enrolled students submit typed text and file uploads | Not Started | 7 |
 | `ASSIGN-03` | System records submission time and retains resubmission history | Not Started | 7 |
@@ -88,7 +88,12 @@
 - Added `guardian_links` model, repository, service, router, and migration `0006_slice5_guardian_links` implementing invite → email token verification (`pending_approval`) → School Admin approval/revocation → multi-school `GET /api/v1/parent/children` (`AUTH-04`, `AUTH-06`).
 - Verified with `pytest -v` (18 passed).
 
-## 4. Next Up — Slice 6 Checklist
+### Slice 6 — Lessons & Secure File Storage
+- Added `lessons` and `stored_files` models, `app/repositories/lesson_repo.py`, `app/services/file_storage.py`, `app/services/lesson.py`, `app/api/v1/lessons.py`, and migration `0007_slice6_lessons_and_files`.
+- Enforced allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.txt`, `.docx`, `.pptx`), magic-byte validation, ZIP traversal checks, 10 MB size limit, random UUID filenames stored outside public web paths, and authorized download streaming (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`).
+- Verified with `pytest -v` (19 passed).
 
-Before starting Slice 6 (Lessons & Secure File Storage — `LEARN-01`):
-- Confirm Open Decision #5: allowed upload file types (recommended default: PDF, DOCX, PPTX, PNG, JPG, TXT) and max file size (recommended default: 10 MB per file), stored under random UUID filenames outside public web paths with authorized download streaming.
+## 4. Next Up — Slice 7 Checklist
+
+Before starting Slice 7 (Assignments, Submissions & Resubmission Rules — `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03`):
+- Confirm Open Decision #4: allow teachers to configure `allow_late_submissions` and `allow_resubmissions` per assignment (recommended default: both configurable per assignment, retaining full versioned submission history).

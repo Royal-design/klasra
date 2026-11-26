@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     email_from: str | None = None
     frontend_base_url: str = "http://localhost:3000"
 
+    # Secure file upload storage (outside any public web path)
+    upload_storage_dir: str = "./storage/uploads"
+    max_upload_bytes: int = 10 * 1024 * 1024  # 10 MB
+
     @model_validator(mode="after")
     def validate_email_provider_settings(self) -> "Settings":
         if self.email_provider == "resend":

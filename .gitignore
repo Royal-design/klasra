@@ -16,6 +16,10 @@ build/
 .env.*
 !.env.example
 
+# Local file uploads storage (never commit uploaded user files)
+backend/storage/
+storage/
+
 # IDEs & OS
 .vscode/
 .idea/

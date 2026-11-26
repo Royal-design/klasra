@@ -170,19 +170,23 @@ Teachers cannot self-register via open cohort codes. Instead, School Admins send
 | `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/revoke` | School Admin | Yes | Revoke parent-student link immediately and notify via Resend (audited). |
 | `GET` | `/api/v1/parent/children` | Authenticated Parent | No | List **only approved** linked children across all active schools (paginated, `?school_id=&q=`). |
 
+### Lessons & Secure File Storage (Slice 6 — `LEARN-01`)
+
+Attachments enforce allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.txt`, `.docx`, `.pptx`), magic-byte content checks, ZIP path-traversal checks, 10 MB size limit, random UUID filenames stored outside public web paths, and authorized download streaming (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`).
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher | Yes | Create a `draft` or `published` lesson for an assigned subject offering (audited). |
+| `GET` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher, Enrolled Student | No | List lessons (paginated, `?status=&q=`). Teachers see drafts + published; enrolled students see **published only**. |
+| `PATCH` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}` | Assigned Teacher | Yes | Update lesson title, content, or publish status (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments` | Assigned Teacher | Yes | Upload an allow-listed learning material attachment (`multipart/form-data`, audited). |
+| `GET` | `/api/v1/files/{file_id}/download` | Assigned Teacher, Enrolled Student | No | Stream authorized file attachment (students blocked from draft lesson files; parents/outsiders blocked `403`). |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 6 — Lessons & File Storage (`LEARN-01`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `POST` / `PATCH` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher | Create/publish/update lessons and materials |
-| `GET` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher, Enrolled Student | List lessons for an offering |
-| `GET` | `/api/v1/files/{file_id}/download` | Authorized Users | Stream authorized file with `Content-Disposition: attachment` |
 
 ### Slice 7 — Assignments & Submissions (`ASSIGN-01`..`ASSIGN-03`)
 
