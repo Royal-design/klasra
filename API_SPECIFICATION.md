@@ -193,19 +193,20 @@ Attachments enforce allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.
 | `POST` | `/api/v1/assignments/{assignment_id}/submissions` | Enrolled Student | Yes | Submit typed `text_content` and/or `files` (`multipart/form-data`). Enforces late/resubmission rules (`409`) and retains full `version_number` history (audited). |
 | `GET` | `/api/v1/assignments/{assignment_id}/submissions` | Assigned Teacher, Enrolled Student (own) | No | List submissions (paginated, `?student_user_id=&latest_only=`). Students see **only their own** history. |
 
+### Grades, Feedback & Progress Views (Slice 8 — `ASSIGN-04`, `PROG-01`, `PROG-02`)
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `PUT` | `/api/v1/submissions/{submission_id}/grade` | Assigned Teacher | Yes | Record or update `score` (`0 <= score <= max_score`), `letter_grade`, `feedback`, and `is_published` (audited on every create/change). |
+| `GET` | `/api/v1/assignments/{assignment_id}/grades` | Assigned Teacher | No | List all grades (draft + published) for an assignment (paginated, `?is_published=`). |
+| `GET` | `/api/v1/students/me/grades` | Student | No | View **only own published** grades and teacher feedback (paginated, `?subject_offering_id=&q=`). |
+| `GET` | `/api/v1/parent/children/{student_id}/grades` | Approved Parent | No | View **only approved child's published** grades and teacher feedback (paginated, `?q=`; `403` for unapproved/revoked/other students). |
+
 ---
 
 ## 3. Planned Endpoints (By Slice)
 
 > Endpoints below are **not yet implemented**. Exact payloads and query parameters will be finalized as each slice is built.
-
-### Slice 8 — Grades, Feedback & Progress (`ASSIGN-04`, `PROG-01`, `PROG-02`)
-
-| Method | Path | Access | Description |
-| --- | --- | --- | --- |
-| `PUT` | `/api/v1/submissions/{submission_id}/grade` | Assigned Teacher | Record/update grade and feedback (audited) |
-| `GET` | `/api/v1/students/me/progress` | Student | View own grades, feedback, and attendance |
-| `GET` | `/api/v1/parent/children/{student_id}/progress` | Approved Parent | View approved child's grades, feedback, and attendance only |
 
 ### Slice 9 — Attendance (`ATT-01`, `ATT-02`)
 

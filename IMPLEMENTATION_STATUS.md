@@ -15,8 +15,8 @@
 | **5** | Parent invitations, verification, approval & multi-school child links (+ staff email activation) | `AUTH-04`, `AUTH-06` | **Done** | 18/18 `pytest` tests passing; migrations `0005_staff_invitations` & `0006_slice5_guardian_links` applied to PostgreSQL `lms` |
 | **6** | Lessons & secure file storage | `LEARN-01` | **Done** | 19/19 `pytest` tests passing; migration `0007_slice6_lessons_and_files` applied to PostgreSQL `lms` |
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | **Done** | 20/20 `pytest` tests passing; migration `0008_slice7_assignments` applied to PostgreSQL `lms` |
-| **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | Not Started | Next up (confirm Open Decision #7: grades hidden until published) |
-| **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Blocked on Open Decision #6 |
+| **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | **Done** | 21/21 `pytest` tests passing; migration `0009_slice8_grades` applied to PostgreSQL `lms` |
+| **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | Not Started | Next up (confirm Open Decision #6: attendance statuses) |
 | **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Blocked on Open Decisions #1, #9 |
 
 ## 2. Requirement ID Coverage
@@ -38,9 +38,9 @@
 | `ASSIGN-01` | Teacher creates assignment for assigned subject offering | **Done** | 7 |
 | `ASSIGN-02` | Enrolled students submit typed text and file uploads | **Done** | 7 |
 | `ASSIGN-03` | System records submission time and retains resubmission history | **Done** | 7 |
-| `ASSIGN-04` | Teacher reviews submissions and records grade and feedback | Not Started | 8 |
-| `PROG-01` | Student views only their own grades, attendance, and feedback | Not Started | 8–9 |
-| `PROG-02` | Approved parent views only linked children's grades, attendance, and feedback | Not Started | 8–9 |
+| `ASSIGN-04` | Teacher reviews submissions and records grade and feedback | **Done** | 8 |
+| `PROG-01` | Student views only their own grades, attendance, and feedback | **In Progress** (grades & feedback done; attendance in Slice 9) | 8–9 |
+| `PROG-02` | Approved parent views only linked children's grades, attendance, and feedback | **In Progress** (grades & feedback done; attendance in Slice 9) | 8–9 |
 | `ATT-01` | Teacher records attendance for assigned offerings/classes | Not Started | 9 |
 | `ATT-02` | Attendance changes include responsible user and timestamp | Not Started | 9 |
 
@@ -98,7 +98,12 @@
 - Enforced per-assignment `allow_late_submissions` (`409 LATE_SUBMISSION_NOT_ALLOWED`) and `allow_resubmissions` (`409 RESUBMISSION_NOT_ALLOWED`) policies, versioned submission history (`version_number`, `is_latest`), and strict student-to-student privacy on submissions and file downloads.
 - Verified with `pytest -v` (20 passed).
 
-## 4. Next Up — Slice 8 Checklist
+### Slice 8 — Grades, Teacher Feedback & Student/Parent Progress Views
+- Added `grades` model, `app/repositories/grade_repo.py`, `app/schemas/grade.py`, `app/services/grade.py`, `app/api/v1/grades.py`, and migration `0009_slice8_grades`.
+- Implemented `PUT /api/v1/submissions/{id}/grade` (score bounds validation, `is_published` draft/publish visibility, audit logging on every create/update), `GET /api/v1/assignments/{id}/grades`, `GET /api/v1/students/me/grades` (`PROG-01`), and `GET /api/v1/parent/children/{id}/grades` (`PROG-02`).
+- Verified with `pytest -v` (21 passed).
 
-Before starting Slice 8 (Grades, Feedback & Student/Parent Progress Views — `ASSIGN-04`, `PROG-01`, `PROG-02`):
-- Confirm Open Decision #7: should grades support a `is_published` flag (hidden from students/parents until the teacher publishes them, defaulting to `true` or teacher-selectable)? (Recommended: `is_published` boolean per grade, defaulting to `true` so teachers can publish immediately or save as draft.)
+## 4. Next Up — Slice 9 Checklist
+
+Before starting Slice 9 (Attendance & Attribution History — `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02`):
+- Confirm Open Decision #6: required attendance statuses (recommended default: `present`, `absent`, `late`, `excused`, with responsible user + timestamp attribution and full audit trail on changes).

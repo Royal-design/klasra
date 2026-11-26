@@ -10,6 +10,7 @@ from app.models.academic import (
 )
 from app.models.assignment import Assignment, Submission
 from app.models.audit import AuditEvent
+from app.models.grade import Grade
 from app.models.guardian import GuardianLink
 from app.models.lesson import Lesson, StoredFile
 from app.models.membership import SchoolMembership
@@ -26,6 +27,7 @@ __all__ = [
     "AuditEvent",
     "ClassGroup",
     "Enrollment",
+    "Grade",
     "GuardianLink",
     "Lesson",
     "OfferingTeacher",
