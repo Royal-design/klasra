@@ -9,7 +9,7 @@ from app.models.lesson import StoredFile
 from app.repositories import assignment_repo
 from app.schemas.assignment import AssignmentCreateRequest, AssignmentUpdateRequest
 from app.services.audit import record_audit_event
-from app.services.file_storage import save_uploaded_file
+from app.services.file_storage import StorageBackend, save_uploaded_file
 from app.services.lesson import (
     _check_offering_read_access,
     _get_offering_and_check_teacher,
@@ -149,7 +149,7 @@ def attach_file_to_assignment(
     actor_user_id: uuid.UUID,
     raw_filename: str,
     content: bytes,
-    storage_dir: str,
+    storage_backend: StorageBackend,
     max_bytes: int,
 ) -> StoredFile:
     offering = _get_offering_and_check_teacher(
@@ -165,7 +165,7 @@ def attach_file_to_assignment(
         raise AppError(404, "ASSIGNMENT_NOT_FOUND", "Assignment not found.")
 
     saved = save_uploaded_file(
-        storage_dir=storage_dir,
+        storage_backend=storage_backend,
         raw_filename=raw_filename,
         content=content,
         max_bytes=max_bytes,
@@ -204,7 +204,7 @@ def create_student_submission(
     actor_user_id: uuid.UUID,
     text_content: str | None,
     uploaded_files: list[tuple[str, bytes]],
-    storage_dir: str,
+    storage_backend: StorageBackend,
     max_bytes: int,
 ) -> Submission:
     """ASSIGN-02 & ASSIGN-03: Enrolled student submits text and/or files with version history."""
@@ -254,7 +254,7 @@ def create_student_submission(
     # Validate & store all uploaded files before committing submission row
     saved_uploads = [
         save_uploaded_file(
-            storage_dir=storage_dir,
+            storage_backend=storage_backend,
             raw_filename=fname,
             content=fbytes,
             max_bytes=max_bytes,

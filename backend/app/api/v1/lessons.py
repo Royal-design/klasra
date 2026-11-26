@@ -1,16 +1,25 @@
 import uuid
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import AuthContext, get_app_settings, get_current_auth, verify_csrf
+from app.api.deps import (
+    AuthContext,
+    get_app_settings,
+    get_current_auth,
+    get_storage_backend,
+    verify_csrf,
+)
 from app.core.config import Settings
 from app.db.session import get_db
 from app.schemas.lesson import (
+    CompleteUploadRequest,
+    DownloadUrlResponse,
     LessonCreateRequest,
     LessonResponse,
     LessonUpdateRequest,
+    PresignUploadRequest,
+    PresignUploadResponse,
     StoredFileSummary,
 )
 from app.schemas.pagination import (
@@ -20,6 +29,7 @@ from app.schemas.pagination import (
     get_pagination_params,
 )
 from app.services import lesson as lesson_service
+from app.services.file_storage import StorageBackend
 
 router = APIRouter(tags=["lessons-and-files"])
 
@@ -33,6 +43,7 @@ def _to_lesson_response(lesson) -> LessonResponse:
         author_full_name=lesson.author.full_name if lesson.author else None,
         title=lesson.title,
         content=lesson.content,
+        video_url=lesson.video_url,
         status=lesson.status,
         published_at=lesson.published_at,
         attachments=[
@@ -119,7 +130,7 @@ def update_lesson_endpoint(
     "/offerings/{offering_id}/lessons/{lesson_id}/attachments",
     response_model=StoredFileSummary,
     status_code=status.HTTP_201_CREATED,
-    summary="Upload an allow-listed learning material attachment to a lesson (Assigned Teacher)",
+    summary="Upload an allow-listed learning material or video attachment to a lesson (Assigned Teacher)",
 )
 async def upload_lesson_attachment_endpoint(
     offering_id: uuid.UUID,
@@ -128,6 +139,7 @@ async def upload_lesson_attachment_endpoint(
     auth: AuthContext = Depends(verify_csrf),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
 ) -> StoredFileSummary:
     content = await file.read()
     stored = lesson_service.attach_file_to_lesson(
@@ -137,8 +149,64 @@ async def upload_lesson_attachment_endpoint(
         actor_user_id=auth.user.id,
         raw_filename=file.filename or "attachment",
         content=content,
-        storage_dir=settings.upload_storage_dir,
+        storage_backend=storage_backend,
         max_bytes=settings.max_upload_bytes,
+        max_video_bytes=settings.max_video_upload_bytes,
+    )
+    return StoredFileSummary.model_validate(stored)
+
+
+@router.post(
+    "/offerings/{offering_id}/lessons/{lesson_id}/attachments/presign",
+    response_model=PresignUploadResponse,
+    summary="Request a short-lived S3 presigned PUT URL for direct lesson attachment/video upload (Assigned Teacher)",
+)
+def presign_lesson_attachment_endpoint(
+    offering_id: uuid.UUID,
+    lesson_id: uuid.UUID,
+    payload: PresignUploadRequest,
+    auth: AuthContext = Depends(verify_csrf),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
+) -> PresignUploadResponse:
+    return lesson_service.presign_lesson_attachment_upload(
+        db,
+        offering_id=offering_id,
+        lesson_id=lesson_id,
+        payload=payload,
+        actor_user_id=auth.user.id,
+        storage_backend=storage_backend,
+        max_bytes=settings.max_upload_bytes,
+        max_video_bytes=settings.max_video_upload_bytes,
+        expires_in=settings.presigned_url_ttl_seconds,
+    )
+
+
+@router.post(
+    "/offerings/{offering_id}/lessons/{lesson_id}/attachments/complete",
+    response_model=StoredFileSummary,
+    status_code=status.HTTP_201_CREATED,
+    summary="Verify and register a directly uploaded S3 lesson attachment/video (Assigned Teacher)",
+)
+def complete_lesson_attachment_endpoint(
+    offering_id: uuid.UUID,
+    lesson_id: uuid.UUID,
+    payload: CompleteUploadRequest,
+    auth: AuthContext = Depends(verify_csrf),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
+) -> StoredFileSummary:
+    stored = lesson_service.complete_lesson_attachment_upload(
+        db,
+        offering_id=offering_id,
+        lesson_id=lesson_id,
+        payload=payload,
+        actor_user_id=auth.user.id,
+        storage_backend=storage_backend,
+        max_bytes=settings.max_upload_bytes,
+        max_video_bytes=settings.max_video_upload_bytes,
     )
     return StoredFileSummary.model_validate(stored)
 
@@ -151,17 +219,41 @@ def download_file_endpoint(
     file_id: uuid.UUID,
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
-    settings: Settings = Depends(get_app_settings),
-) -> FileResponse:
-    stored, path = lesson_service.authorize_and_resolve_file_download(
+    storage_backend: StorageBackend = Depends(get_storage_backend),
+) -> Response:
+    stored, file_bytes = lesson_service.authorize_and_fetch_file_bytes(
         db,
         file_id=file_id,
         actor_user_id=auth.user.id,
-        storage_dir=settings.upload_storage_dir,
+        storage_backend=storage_backend,
     )
-    return FileResponse(
-        path=path,
+    return Response(
+        content=file_bytes,
         media_type=stored.content_type,
-        filename=stored.original_filename,
-        content_disposition_type="attachment",
+        headers={
+            "Content-Disposition": f'attachment; filename="{stored.original_filename}"'
+        },
+    )
+
+
+@router.get(
+    "/files/{file_id}/download-url",
+    response_model=DownloadUrlResponse,
+    summary="Get a short-lived signed download/playback URL (S3) or proxy download path (local)",
+)
+def get_file_download_url_endpoint(
+    file_id: uuid.UUID,
+    inline: bool = Query(default=False, description="Set true for inline video/PDF playback"),
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
+) -> DownloadUrlResponse:
+    return lesson_service.authorize_and_get_download_url(
+        db,
+        file_id=file_id,
+        actor_user_id=auth.user.id,
+        storage_backend=storage_backend,
+        expires_in=settings.presigned_url_ttl_seconds,
+        inline=inline,
     )

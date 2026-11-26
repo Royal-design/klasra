@@ -27,12 +27,14 @@ def env(tmp_path: Path) -> Generator[tuple[TestClient, dict], None, None]:
     Base.metadata.create_all(engine)
     SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     settings = Settings(
+        _env_file=None,
         app_env="test",
         database_url="sqlite+pysqlite:///:memory:",
         cors_origins="http://localhost:3000",
         cookie_secure=False,
         rate_limit_per_minute=500,
         login_rate_limit_per_minute=100,
+        storage_provider="local",
         upload_storage_dir=str(tmp_path / "uploads"),
         max_upload_bytes=1024 * 1024,
     )

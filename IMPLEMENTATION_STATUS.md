@@ -17,7 +17,7 @@
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | **Done** | 20/20 `pytest` tests passing; migration `0008_slice7_assignments` applied to PostgreSQL `lms` |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | **Done** | 21/21 `pytest` tests passing; migration `0009_slice8_grades` applied to PostgreSQL `lms` |
 | **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | **Done** | 22/22 `pytest` tests passing; migration `0010_slice9_attendance` applied to PostgreSQL `lms` |
-| **10** | Deployment, backups, monitoring & privacy review | Security & Ops | Not Started | Final slice (S3/R2 storage adapter, Redis rate limiter, TLS/mTLS, backups, NDPA privacy review) |
+| **10** | Deployment, backups, monitoring, privacy review & lesson video support | Security, Ops & `LEARN-01` | **Done** | S3/Backblaze B2 storage adapter, presigned direct upload/playback URLs, 50 MB lesson video limit + `video_url` (`0011_lesson_video_url`), `Dockerfile`, JSON PII-safe logging, `X-Request-ID`, `DEPLOYMENT_AND_PRIVACY.md` (26/26 `pytest` passing) |
 
 ## 2. Requirement ID Coverage
 
@@ -109,8 +109,17 @@
 - Added S3-compatible storage environment variable placeholders to `backend/.env.example`.
 - Verified with `pytest -v` (22 passed).
 
-## 4. Next Up — Slice 10 & Next.js Frontend
+### Slice 10 — Deployment, S3/Backblaze B2 Storage Adapter, Lesson Video Support, Monitoring & Privacy Review
+- Added `boto3` and `StorageBackend` abstraction (`LocalStorageBackend`, `S3StorageBackend` for Backblaze B2 / Cloudflare R2 / AWS S3 / Supabase, `InMemoryStorageBackend`).
+- Added Lesson Video Support:
+  - Separate upload size limits: `MAX_UPLOAD_BYTES=10 MB` for documents/images and `MAX_VIDEO_UPLOAD_BYTES=50 MB` for lesson videos (`.mp4`, `.webm`, `.mov` with magic-byte checks; allowed on lessons only, never student submissions).
+  - Added optional `video_url` column on `lessons` (Alembic migration `0011_lesson_video_url`) strictly allow-listed to `https://` YouTube, Vimeo, and Loom URLs.
+  - Added S3 presigned direct upload (`POST .../attachments/presign` + `.../complete` with object size & magic-byte verification) and signed download/playback URL (`GET /api/v1/files/{id}/download-url?inline=true`).
+- Added production fail-fast guards (`COOKIE_SECURE=true` required in `production`, `S3_BUCKET`/`S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` required when `STORAGE_PROVIDER=s3`).
+- Added structured JSON PII-safe request logging (`app/core/logging.py`) and `X-Request-ID` tracing header.
+- Added non-root `backend/Dockerfile` and `DEPLOYMENT_AND_PRIVACY.md` (production checklist, encrypted PostgreSQL backup/restore runbook, monitoring alerts, and NDPA 2023 child-data compliance review).
+- Verified with `pytest -v` (26 passed).
 
-All 9 core backend domain slices (every `SCH-*`, `AUTH-*`, `LEARN-*`, `ASSIGN-*`, `PROG-*`, and `ATT-*` requirement) are **Done**! Next up:
-- **Slice 10:** Production hardening (S3/Cloudflare R2 storage adapter, Redis rate limiter, PostgreSQL TLS/mTLS, structured PII-safe logging, backup runbook, and NDPA 2023 privacy checklist).
-- **Frontend:** Scaffold the Next.js application in `frontend/` consuming `/api/v1`.
+## 4. Next Up — Next.js Frontend
+
+All **10 backend slices** are **Done**! Ready to scaffold the Next.js application in `frontend/` consuming `/api/v1`.

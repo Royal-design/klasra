@@ -17,6 +17,7 @@ from app.models.user import User
 from app.repositories import membership_repo, school_repo
 from app.services.auth import get_active_session_and_user
 from app.services.email import EmailProvider
+from app.services.file_storage import StorageBackend
 
 # Exposes an "Authorize" input in Swagger UI for X-CSRF-Token on write endpoints.
 csrf_header_scheme = APIKeyHeader(
@@ -47,6 +48,10 @@ def get_app_settings(request: Request) -> Settings:
 
 def get_email_provider(request: Request) -> EmailProvider:
     return request.app.state.email_provider
+
+
+def get_storage_backend(request: Request) -> StorageBackend:
+    return request.app.state.storage_backend
 
 
 def get_current_auth(

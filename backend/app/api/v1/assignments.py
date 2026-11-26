@@ -3,7 +3,13 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import AuthContext, get_app_settings, get_current_auth, verify_csrf
+from app.api.deps import (
+    AuthContext,
+    get_app_settings,
+    get_current_auth,
+    get_storage_backend,
+    verify_csrf,
+)
 from app.core.config import Settings
 from app.db.session import get_db
 from app.schemas.assignment import (
@@ -20,6 +26,7 @@ from app.schemas.pagination import (
     get_pagination_params,
 )
 from app.services import assignment as assignment_service
+from app.services.file_storage import StorageBackend
 
 router = APIRouter(tags=["assignments-and-submissions"])
 
@@ -152,6 +159,7 @@ async def upload_assignment_attachment_endpoint(
     auth: AuthContext = Depends(verify_csrf),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
 ) -> StoredFileSummary:
     content = await file.read()
     stored = assignment_service.attach_file_to_assignment(
@@ -161,7 +169,7 @@ async def upload_assignment_attachment_endpoint(
         actor_user_id=auth.user.id,
         raw_filename=file.filename or "attachment",
         content=content,
-        storage_dir=settings.upload_storage_dir,
+        storage_backend=storage_backend,
         max_bytes=settings.max_upload_bytes,
     )
     return StoredFileSummary.model_validate(stored)
@@ -180,6 +188,7 @@ async def create_submission_endpoint(
     auth: AuthContext = Depends(verify_csrf),
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_app_settings),
+    storage_backend: StorageBackend = Depends(get_storage_backend),
 ) -> SubmissionResponse:
     uploaded: list[tuple[str, bytes]] = []
     for upload in files:
@@ -192,7 +201,7 @@ async def create_submission_endpoint(
         actor_user_id=auth.user.id,
         text_content=text_content,
         uploaded_files=uploaded,
-        storage_dir=settings.upload_storage_dir,
+        storage_backend=storage_backend,
         max_bytes=settings.max_upload_bytes,
     )
     return _to_submission_response(submission)

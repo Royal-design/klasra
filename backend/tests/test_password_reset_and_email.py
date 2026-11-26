@@ -223,6 +223,7 @@ def test_change_password_requires_csrf_and_revokes_session(
 def test_resend_config_requires_api_key_and_from_address() -> None:
     with pytest.raises(ValueError, match="RESEND_API_KEY"):
         Settings(
+            _env_file=None,
             app_env="test",
             database_url="sqlite+pysqlite:///:memory:",
             email_provider="resend",

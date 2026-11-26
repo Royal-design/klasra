@@ -88,3 +88,7 @@ def list_lessons_for_offering(
 
 def get_stored_file_by_id(db: Session, *, file_id: uuid.UUID) -> StoredFile | None:
     return db.get(StoredFile, file_id)
+
+
+def get_stored_file_by_storage_key(db: Session, *, storage_key: str) -> StoredFile | None:
+    return db.scalar(select(StoredFile).where(StoredFile.storage_key == storage_key))

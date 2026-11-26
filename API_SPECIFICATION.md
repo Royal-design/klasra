@@ -170,17 +170,23 @@ Teachers cannot self-register via open cohort codes. Instead, School Admins send
 | `POST` | `/api/v1/schools/{school_id}/guardian-links/{link_id}/revoke` | School Admin | Yes | Revoke parent-student link immediately and notify via Resend (audited). |
 | `GET` | `/api/v1/parent/children` | Authenticated Parent | No | List **only approved** linked children across all active schools (paginated, `?school_id=&q=`). |
 
-### Lessons & Secure File Storage (Slice 6 — `LEARN-01`)
+### Lessons, Video Support & Secure File Storage (Slice 6 + Slice 10 — `LEARN-01`)
 
-Attachments enforce allow-listed extensions (`.pdf`, `.png`, `.jpg`, `.jpeg`, `.txt`, `.docx`, `.pptx`), magic-byte content checks, ZIP path-traversal checks, 10 MB size limit, random UUID filenames stored outside public web paths, and authorized download streaming (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`).
+- **Document/Image attachments (10 MB max):** `.pdf`, `.png`, `.jpg`, `.jpeg`, `.txt`, `.docx`, `.pptx` with magic-byte validation and ZIP path-traversal checks.
+- **Lesson Video attachments (50 MB max, teachers on lessons only — never student submissions):** `.mp4`, `.webm`, `.mov` with magic-byte validation (`ftyp`, WebM EBML, QuickTime atoms).
+- **External Video Links (`video_url` on lessons):** Optional `https://` URL strictly allow-listed to YouTube, Vimeo, and Loom.
+- **Storage & Direct Uploads:** Supports `STORAGE_PROVIDER=local` (dev/tests) and `STORAGE_PROVIDER=s3` (Backblaze B2 / Cloudflare R2 / AWS S3 / Supabase) with short-lived presigned PUT uploads and signed GET playback/download URLs.
 
 | Method | Path | Access | CSRF Required | Description |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher | Yes | Create a `draft` or `published` lesson for an assigned subject offering (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher | Yes | Create a `draft` or `published` lesson (with optional allow-listed `video_url`) for an assigned subject offering (audited). |
 | `GET` | `/api/v1/offerings/{offering_id}/lessons` | Assigned Teacher, Enrolled Student | No | List lessons (paginated, `?status=&q=`). Teachers see drafts + published; enrolled students see **published only**. |
-| `PATCH` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}` | Assigned Teacher | Yes | Update lesson title, content, or publish status (audited). |
-| `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments` | Assigned Teacher | Yes | Upload an allow-listed learning material attachment (`multipart/form-data`, audited). |
+| `PATCH` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}` | Assigned Teacher | Yes | Update lesson title, content, `video_url`, or publish status (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments` | Assigned Teacher | Yes | Upload an allow-listed learning material (≤10 MB) or lesson video (≤50 MB) via `multipart/form-data` (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments/presign` | Assigned Teacher | Yes | Request a short-lived S3 presigned PUT URL for direct browser upload to object storage (`STORAGE_PROVIDER=s3`). |
+| `POST` | `/api/v1/offerings/{offering_id}/lessons/{lesson_id}/attachments/complete` | Assigned Teacher | Yes | Verify uploaded S3 object size & magic bytes and register it on the lesson (audited). |
 | `GET` | `/api/v1/files/{file_id}/download` | Assigned Teacher, Enrolled Student | No | Stream authorized file attachment (students blocked from draft lesson files; parents/outsiders blocked `403`). |
+| `GET` | `/api/v1/files/{file_id}/download-url` | Assigned Teacher, Enrolled Student | No | Return a short-lived signed download/playback URL (`?inline=true` for video/PDF players) on S3, or proxy path on local storage. |
 
 ### Assignments & Submissions (Slice 7 — `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03`)
 
@@ -215,6 +221,6 @@ Allowed statuses: `present`, `absent`, `late`, `excused`. Every record and updat
 
 ---
 
-## 3. Planned Endpoints (By Slice)
+## 3. Production Hardening & Observability (Slice 10)
 
-> All core backend domain slices (Slices 1–9) are now implemented! Slice 10 covers production deployment hardening, S3/R2 storage adapter, backups, monitoring, and privacy review.
+All 10 backend slices are implemented! Production deployment, S3/Backblaze B2 object storage, encrypted PostgreSQL backup/restore procedures, structured JSON PII-safe logging (`X-Request-ID`), and NDPA 2023 privacy review are documented in [`DEPLOYMENT_AND_PRIVACY.md`](DEPLOYMENT_AND_PRIVACY.md).
