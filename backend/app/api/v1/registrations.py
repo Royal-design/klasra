@@ -12,6 +12,12 @@ from app.api.deps import (
 from app.core.config import Settings
 from app.db.session import get_db
 from app.repositories import registration_repo
+from app.schemas.pagination import (
+    PaginatedResponse,
+    PaginationParams,
+    build_paginated_response,
+    get_pagination_params,
+)
 from app.schemas.registration import (
     RegistrationCodeCreateRequest,
     RegistrationCodeCreateResponse,
@@ -126,18 +132,29 @@ def create_student_email_invite_endpoint(
 
 @router.get(
     "/schools/{school_id}/registrations/students",
-    response_model=list[StudentRegistrationResponse],
-    summary="List student registration requests for this school (School Admin)",
+    response_model=PaginatedResponse[StudentRegistrationResponse],
+    summary="List student registration requests with pagination and filtering (School Admin)",
 )
 def list_student_registrations_endpoint(
     request_status: str | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=100, description="Search by email, name, or reference"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[StudentRegistrationResponse]:
-    rows = registration_repo.list_registration_requests_for_school(
-        db, school_id=school_auth.school.id, status=request_status
+) -> PaginatedResponse[StudentRegistrationResponse]:
+    rows, total = registration_repo.list_registration_requests_for_school(
+        db,
+        school_id=school_auth.school.id,
+        status=request_status,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
     )
-    return [_to_registration_response(reg_req, user) for reg_req, user in rows]
+    return build_paginated_response(
+        [_to_registration_response(reg_req, user) for reg_req, user in rows],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.post(

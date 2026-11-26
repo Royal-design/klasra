@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import SchoolAuthContext, require_school_role
@@ -9,6 +9,12 @@ from app.schemas.membership import (
     MembershipUpdateRequest,
     SchoolUserCreateRequest,
     SchoolUserResponse,
+)
+from app.schemas.pagination import (
+    PaginatedResponse,
+    PaginationParams,
+    build_paginated_response,
+    get_pagination_params,
 )
 from app.services.membership import (
     create_school_user,
@@ -58,15 +64,31 @@ def create_school_user_endpoint(
 
 @router.get(
     "/users",
-    response_model=list[SchoolUserResponse],
-    summary="List users belonging to this school (School Admin)",
+    response_model=PaginatedResponse[SchoolUserResponse],
+    summary="List users belonging to this school with pagination and filtering (School Admin)",
 )
 def list_school_users_endpoint(
+    role: str | None = Query(default=None),
+    membership_status: str | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=100, description="Search by email or name"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[SchoolUserResponse]:
-    rows = list_school_users(db, school_id=school_auth.school.id)
-    return [_to_school_user_response(user, membership) for user, membership in rows]
+) -> PaginatedResponse[SchoolUserResponse]:
+    rows, total = list_school_users(
+        db,
+        school_id=school_auth.school.id,
+        role=role,
+        status=membership_status,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+    )
+    return build_paginated_response(
+        [_to_school_user_response(user, membership) for user, membership in rows],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch(

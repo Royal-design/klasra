@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.academic import (
@@ -13,6 +13,7 @@ from app.models.academic import (
     Term,
     YearLevel,
 )
+from app.repositories.pagination import count_and_paginate_scalars, escape_like
 
 
 # --- Academic Years ---
@@ -38,14 +39,23 @@ def get_academic_year_by_name(
     )
 
 
-def list_academic_years(db: Session, *, school_id: uuid.UUID) -> list[AcademicYear]:
-    return list(
-        db.scalars(
-            select(AcademicYear)
-            .where(AcademicYear.school_id == school_id)
-            .order_by(AcademicYear.start_date.desc())
-        ).all()
-    )
+def list_academic_years(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    status: str | None = None,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[AcademicYear], int]:
+    stmt = select(AcademicYear).where(AcademicYear.school_id == school_id)
+    if status is not None:
+        stmt = stmt.where(AcademicYear.status == status)
+    if q and q.strip():
+        pattern = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(AcademicYear.name.ilike(pattern, escape="\\"))
+    stmt = stmt.order_by(AcademicYear.start_date.desc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 # --- Terms ---
@@ -70,12 +80,22 @@ def get_term_by_year_and_name(
 
 
 def list_terms(
-    db: Session, *, school_id: uuid.UUID, academic_year_id: uuid.UUID | None = None
-) -> list[Term]:
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    academic_year_id: uuid.UUID | None = None,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[Term], int]:
     stmt = select(Term).where(Term.school_id == school_id)
     if academic_year_id is not None:
         stmt = stmt.where(Term.academic_year_id == academic_year_id)
-    return list(db.scalars(stmt.order_by(Term.start_date.asc())).all())
+    if q and q.strip():
+        pattern = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(Term.name.ilike(pattern, escape="\\"))
+    stmt = stmt.order_by(Term.start_date.asc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 # --- Year Levels ---
@@ -99,14 +119,20 @@ def get_year_level_by_name(
     )
 
 
-def list_year_levels(db: Session, *, school_id: uuid.UUID) -> list[YearLevel]:
-    return list(
-        db.scalars(
-            select(YearLevel)
-            .where(YearLevel.school_id == school_id)
-            .order_by(YearLevel.display_order.asc(), YearLevel.name.asc())
-        ).all()
-    )
+def list_year_levels(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[YearLevel], int]:
+    stmt = select(YearLevel).where(YearLevel.school_id == school_id)
+    if q and q.strip():
+        pattern = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(YearLevel.name.ilike(pattern, escape="\\"))
+    stmt = stmt.order_by(YearLevel.display_order.asc(), YearLevel.name.asc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 # --- Class Groups ---
@@ -133,12 +159,25 @@ def get_class_group_by_year_and_name(
 
 
 def list_class_groups(
-    db: Session, *, school_id: uuid.UUID, academic_year_id: uuid.UUID | None = None
-) -> list[ClassGroup]:
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    academic_year_id: uuid.UUID | None = None,
+    year_level_id: uuid.UUID | None = None,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[ClassGroup], int]:
     stmt = select(ClassGroup).where(ClassGroup.school_id == school_id)
     if academic_year_id is not None:
         stmt = stmt.where(ClassGroup.academic_year_id == academic_year_id)
-    return list(db.scalars(stmt.order_by(ClassGroup.name.asc())).all())
+    if year_level_id is not None:
+        stmt = stmt.where(ClassGroup.year_level_id == year_level_id)
+    if q and q.strip():
+        pattern = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(ClassGroup.name.ilike(pattern, escape="\\"))
+    stmt = stmt.order_by(ClassGroup.name.asc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 # --- Subjects ---
@@ -162,14 +201,25 @@ def get_subject_by_code(
     )
 
 
-def list_subjects(db: Session, *, school_id: uuid.UUID) -> list[Subject]:
-    return list(
-        db.scalars(
-            select(Subject)
-            .where(Subject.school_id == school_id)
-            .order_by(Subject.code.asc())
-        ).all()
-    )
+def list_subjects(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[Subject], int]:
+    stmt = select(Subject).where(Subject.school_id == school_id)
+    if q and q.strip():
+        pattern = f"%{escape_like(q.strip())}%"
+        stmt = stmt.where(
+            or_(
+                Subject.code.ilike(pattern, escape="\\"),
+                Subject.name.ilike(pattern, escape="\\"),
+            )
+        )
+    stmt = stmt.order_by(Subject.code.asc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 # --- Subject Offerings & Teacher Assignments ---
@@ -205,12 +255,27 @@ def get_duplicate_subject_offering(
 
 
 def list_subject_offerings(
-    db: Session, *, school_id: uuid.UUID, class_group_id: uuid.UUID | None = None
-) -> list[SubjectOffering]:
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    class_group_id: uuid.UUID | None = None,
+    subject_id: uuid.UUID | None = None,
+    term_id: uuid.UUID | None = None,
+    status: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[SubjectOffering], int]:
     stmt = select(SubjectOffering).where(SubjectOffering.school_id == school_id)
     if class_group_id is not None:
         stmt = stmt.where(SubjectOffering.class_group_id == class_group_id)
-    return list(db.scalars(stmt.order_by(SubjectOffering.created_at.desc())).all())
+    if subject_id is not None:
+        stmt = stmt.where(SubjectOffering.subject_id == subject_id)
+    if term_id is not None:
+        stmt = stmt.where(SubjectOffering.term_id == term_id)
+    if status is not None:
+        stmt = stmt.where(SubjectOffering.status == status)
+    stmt = stmt.order_by(SubjectOffering.created_at.desc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
 def get_offering_teacher(
@@ -281,13 +346,19 @@ def list_enrollments(
     school_id: uuid.UUID,
     student_user_id: uuid.UUID | None = None,
     class_group_id: uuid.UUID | None = None,
+    academic_year_id: uuid.UUID | None = None,
     status: str | None = None,
-) -> list[Enrollment]:
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[Enrollment], int]:
     stmt = select(Enrollment).where(Enrollment.school_id == school_id)
     if student_user_id is not None:
         stmt = stmt.where(Enrollment.student_user_id == student_user_id)
     if class_group_id is not None:
         stmt = stmt.where(Enrollment.class_group_id == class_group_id)
+    if academic_year_id is not None:
+        stmt = stmt.where(Enrollment.academic_year_id == academic_year_id)
     if status is not None:
         stmt = stmt.where(Enrollment.status == status)
-    return list(db.scalars(stmt.order_by(Enrollment.created_at.desc())).all())
+    stmt = stmt.order_by(Enrollment.created_at.desc())
+    return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)

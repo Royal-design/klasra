@@ -6,6 +6,22 @@ This document specifies the HTTP API exposed by `backend/` for the planned Next.
 
 - **Base path:** `/api/v1`
 - **Content type:** `application/json` (except `multipart/form-data` for spreadsheet imports and file uploads, and binary streaming for authorized file downloads).
+- **Pagination & filtering standard (all `GET` list endpoints):**
+  - Query parameters: `page` (1-based, default `1`), `page_size` (default `20`, max `100`), plus resource-specific filters (`q` case-insensitive search, `status`, `role`, `academic_year_id`, `class_group_id`, `student_user_id`, etc.).
+  - Envelope format:
+    ```json
+    {
+      "items": [],
+      "meta": {
+        "total": 42,
+        "page": 1,
+        "page_size": 20,
+        "total_pages": 3,
+        "has_next": true,
+        "has_prev": false
+      }
+    }
+    ```
 - **Interactive docs (non-production only):** `/docs` (Swagger UI) and `/openapi.json`. Disabled when `APP_ENV=production`.
 - **CORS:** Restricted to explicit origins configured in `CORS_ORIGINS` (default `http://localhost:3000`). Wildcard `*` is rejected at startup.
 - **Security headers (all `/api/v1/*` responses):**

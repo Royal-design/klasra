@@ -32,6 +32,12 @@ from app.schemas.academic import (
     YearLevelResponse,
     YearLevelUpdateRequest,
 )
+from app.schemas.pagination import (
+    PaginatedResponse,
+    PaginationParams,
+    build_paginated_response,
+    get_pagination_params,
+)
 from app.services import academic as academic_service
 
 router = APIRouter(prefix="/schools/{school_id}", tags=["academic"])
@@ -73,13 +79,27 @@ def create_academic_year_endpoint(
     return AcademicYearResponse.model_validate(year)
 
 
-@router.get("/academic-years", response_model=list[AcademicYearResponse])
+@router.get("/academic-years", response_model=PaginatedResponse[AcademicYearResponse])
 def list_academic_years_endpoint(
+    year_status: str | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=100),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[AcademicYearResponse]:
-    years = academic_repo.list_academic_years(db, school_id=school_auth.school.id)
-    return [AcademicYearResponse.model_validate(y) for y in years]
+) -> PaginatedResponse[AcademicYearResponse]:
+    years, total = academic_repo.list_academic_years(
+        db,
+        school_id=school_auth.school.id,
+        status=year_status,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+    )
+    return build_paginated_response(
+        [AcademicYearResponse.model_validate(y) for y in years],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch(
@@ -122,16 +142,27 @@ def create_term_endpoint(
     return TermResponse.model_validate(term)
 
 
-@router.get("/terms", response_model=list[TermResponse])
+@router.get("/terms", response_model=PaginatedResponse[TermResponse])
 def list_terms_endpoint(
     academic_year_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=100),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[TermResponse]:
-    terms = academic_repo.list_terms(
-        db, school_id=school_auth.school.id, academic_year_id=academic_year_id
+) -> PaginatedResponse[TermResponse]:
+    terms, total = academic_repo.list_terms(
+        db,
+        school_id=school_auth.school.id,
+        academic_year_id=academic_year_id,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
     )
-    return [TermResponse.model_validate(t) for t in terms]
+    return build_paginated_response(
+        [TermResponse.model_validate(t) for t in terms],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch("/terms/{term_id}", response_model=TermResponse)
@@ -171,13 +202,25 @@ def create_year_level_endpoint(
     return YearLevelResponse.model_validate(level)
 
 
-@router.get("/year-levels", response_model=list[YearLevelResponse])
+@router.get("/year-levels", response_model=PaginatedResponse[YearLevelResponse])
 def list_year_levels_endpoint(
+    q: str | None = Query(default=None, max_length=100),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[YearLevelResponse]:
-    levels = academic_repo.list_year_levels(db, school_id=school_auth.school.id)
-    return [YearLevelResponse.model_validate(lvl) for lvl in levels]
+) -> PaginatedResponse[YearLevelResponse]:
+    levels, total = academic_repo.list_year_levels(
+        db,
+        school_id=school_auth.school.id,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+    )
+    return build_paginated_response(
+        [YearLevelResponse.model_validate(lvl) for lvl in levels],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch("/year-levels/{year_level_id}", response_model=YearLevelResponse)
@@ -217,16 +260,29 @@ def create_class_group_endpoint(
     return ClassGroupResponse.model_validate(group)
 
 
-@router.get("/class-groups", response_model=list[ClassGroupResponse])
+@router.get("/class-groups", response_model=PaginatedResponse[ClassGroupResponse])
 def list_class_groups_endpoint(
     academic_year_id: uuid.UUID | None = Query(default=None),
+    year_level_id: uuid.UUID | None = Query(default=None),
+    q: str | None = Query(default=None, max_length=100),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[ClassGroupResponse]:
-    groups = academic_repo.list_class_groups(
-        db, school_id=school_auth.school.id, academic_year_id=academic_year_id
+) -> PaginatedResponse[ClassGroupResponse]:
+    groups, total = academic_repo.list_class_groups(
+        db,
+        school_id=school_auth.school.id,
+        academic_year_id=academic_year_id,
+        year_level_id=year_level_id,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
     )
-    return [ClassGroupResponse.model_validate(g) for g in groups]
+    return build_paginated_response(
+        [ClassGroupResponse.model_validate(g) for g in groups],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch("/class-groups/{class_group_id}", response_model=ClassGroupResponse)
@@ -266,13 +322,25 @@ def create_subject_endpoint(
     return SubjectResponse.model_validate(subject)
 
 
-@router.get("/subjects", response_model=list[SubjectResponse])
+@router.get("/subjects", response_model=PaginatedResponse[SubjectResponse])
 def list_subjects_endpoint(
+    q: str | None = Query(default=None, max_length=100, description="Search by code or name"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[SubjectResponse]:
-    subjects = academic_repo.list_subjects(db, school_id=school_auth.school.id)
-    return [SubjectResponse.model_validate(s) for s in subjects]
+) -> PaginatedResponse[SubjectResponse]:
+    subjects, total = academic_repo.list_subjects(
+        db,
+        school_id=school_auth.school.id,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+    )
+    return build_paginated_response(
+        [SubjectResponse.model_validate(s) for s in subjects],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch("/subjects/{subject_id}", response_model=SubjectResponse)
@@ -312,16 +380,27 @@ def create_subject_offering_endpoint(
     return _to_offering_response(offering, teacher_ids)
 
 
-@router.get("/subject-offerings", response_model=list[SubjectOfferingResponse])
+@router.get("/subject-offerings", response_model=PaginatedResponse[SubjectOfferingResponse])
 def list_subject_offerings_endpoint(
     class_group_id: uuid.UUID | None = Query(default=None),
+    subject_id: uuid.UUID | None = Query(default=None),
+    term_id: uuid.UUID | None = Query(default=None),
+    offering_status: str | None = Query(default=None, alias="status"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[SubjectOfferingResponse]:
-    offerings = academic_repo.list_subject_offerings(
-        db, school_id=school_auth.school.id, class_group_id=class_group_id
+) -> PaginatedResponse[SubjectOfferingResponse]:
+    offerings, total = academic_repo.list_subject_offerings(
+        db,
+        school_id=school_auth.school.id,
+        class_group_id=class_group_id,
+        subject_id=subject_id,
+        term_id=term_id,
+        status=offering_status,
+        offset=pagination.offset,
+        limit=pagination.page_size,
     )
-    return [
+    items = [
         _to_offering_response(
             offering,
             academic_repo.list_offering_teacher_ids(
@@ -330,6 +409,7 @@ def list_subject_offerings_endpoint(
         )
         for offering in offerings
     ]
+    return build_paginated_response(items, total=total, pagination=pagination)
 
 
 @router.patch(
@@ -393,22 +473,31 @@ def create_enrollment_endpoint(
     return EnrollmentResponse.model_validate(enrollment)
 
 
-@router.get("/enrollments", response_model=list[EnrollmentResponse])
+@router.get("/enrollments", response_model=PaginatedResponse[EnrollmentResponse])
 def list_enrollments_endpoint(
     student_user_id: uuid.UUID | None = Query(default=None),
     class_group_id: uuid.UUID | None = Query(default=None),
+    academic_year_id: uuid.UUID | None = Query(default=None),
     enrollment_status: str | None = Query(default=None, alias="status"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
-) -> list[EnrollmentResponse]:
-    rows = academic_repo.list_enrollments(
+) -> PaginatedResponse[EnrollmentResponse]:
+    rows, total = academic_repo.list_enrollments(
         db,
         school_id=school_auth.school.id,
         student_user_id=student_user_id,
         class_group_id=class_group_id,
+        academic_year_id=academic_year_id,
         status=enrollment_status,
+        offset=pagination.offset,
+        limit=pagination.page_size,
     )
-    return [EnrollmentResponse.model_validate(r) for r in rows]
+    return build_paginated_response(
+        [EnrollmentResponse.model_validate(r) for r in rows],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.post(

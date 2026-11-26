@@ -29,7 +29,8 @@ Follow Section 11 of `PRODUCT_REQUIREMENTS.md` on every feature slice:
 3. **Migrations & tests:** Every schema change must include an Alembic migration. Every new behavior and authorization rule must have focused `pytest` tests.
 4. **Explain authorization & edge cases:** Document which roles can call each endpoint, how school/resource scoping is enforced, and what happens on unauthorized or cross-school access.
 5. **Keep docs in sync:** Update `API_SPECIFICATION.md` and `IMPLEMENTATION_STATUS.md` whenever endpoints, models, or slice statuses change.
-6. **Self-review:** Check your diff against the slice acceptance criteria and report anything incomplete.
+6. **Pagination & filtering:** Every `GET` list endpoint must accept `PaginationParams` (`page`, `page_size` max 100), relevant filters (`status`, `q`, foreign-key IDs), and return `PaginatedResponse[T]` (`items` + `meta`).
+7. **Self-review:** Check your diff against the slice acceptance criteria and report anything incomplete.
 
 ## 4. Non-Negotiable Security & Multi-Tenancy Rules
 

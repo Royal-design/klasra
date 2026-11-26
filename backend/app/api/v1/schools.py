@@ -1,10 +1,16 @@
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import AuthContext, require_platform_admin
 from app.db.session import get_db
+from app.schemas.pagination import (
+    PaginatedResponse,
+    PaginationParams,
+    build_paginated_response,
+    get_pagination_params,
+)
 from app.schemas.school import (
     SchoolCreateRequest,
     SchoolCreateResponse,
@@ -39,15 +45,28 @@ def create_school_endpoint(
 
 @router.get(
     "",
-    response_model=list[SchoolResponse],
-    summary="List all schools (Platform Admin)",
+    response_model=PaginatedResponse[SchoolResponse],
+    summary="List all schools with pagination and filtering (Platform Admin)",
 )
 def list_schools_endpoint(
+    school_status: str | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, max_length=100, description="Search by name or slug"),
+    pagination: PaginationParams = Depends(get_pagination_params),
     _auth: AuthContext = Depends(require_platform_admin),
     db: Session = Depends(get_db),
-) -> list[SchoolResponse]:
-    schools = list_schools(db)
-    return [SchoolResponse.model_validate(s) for s in schools]
+) -> PaginatedResponse[SchoolResponse]:
+    schools, total = list_schools(
+        db,
+        status=school_status,
+        q=q,
+        offset=pagination.offset,
+        limit=pagination.page_size,
+    )
+    return build_paginated_response(
+        [SchoolResponse.model_validate(s) for s in schools],
+        total=total,
+        pagination=pagination,
+    )
 
 
 @router.patch(

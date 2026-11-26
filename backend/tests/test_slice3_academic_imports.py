@@ -267,7 +267,8 @@ def test_academic_hierarchy_cross_school_isolation_and_enrollments(
         f"/api/v1/schools/{school_a}/enrollments",
         params={"student_user_id": student_a},
     ).json()
-    assert len(all_enrollments) == 2
+    assert len(all_enrollments["items"]) == 2
+    assert all_enrollments["meta"]["total"] == 2
 
     # Cross-school isolation: School B Admin cannot read School A or reference School A's year
     csrf_b = _login(client, "admin@beta.example.com", "SchoolAdminPass123!")

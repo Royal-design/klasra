@@ -97,9 +97,24 @@ def create_school_user(
 
 
 def list_school_users(
-    db: Session, *, school_id: uuid.UUID
-) -> list[tuple[User, SchoolMembership]]:
-    return membership_repo.list_school_users_with_memberships(db, school_id=school_id)
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    role: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[tuple[User, SchoolMembership]], int]:
+    return membership_repo.list_school_users_with_memberships(
+        db,
+        school_id=school_id,
+        role=role,
+        status=status,
+        q=q,
+        offset=offset,
+        limit=limit,
+    )
 
 
 def update_school_membership(

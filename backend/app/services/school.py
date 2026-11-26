@@ -73,8 +73,17 @@ def create_school_with_admin(
     return school, admin_user, membership
 
 
-def list_schools(db: Session) -> list[School]:
-    return school_repo.list_schools(db)
+def list_schools(
+    db: Session,
+    *,
+    status: str | None = None,
+    q: str | None = None,
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[School], int]:
+    return school_repo.list_schools(
+        db, status=status, q=q, offset=offset, limit=limit
+    )
 
 
 def update_school(

@@ -219,7 +219,8 @@ def test_student_registration_code_pending_and_admin_approval(
         f"/api/v1/schools/{school_a}/registrations/students",
         params={"status": "pending"},
     ).json()
-    assert len(pending_list) == 1
+    assert len(pending_list["items"]) == 1
+    assert pending_list["meta"]["total"] == 1
 
     approved = client.post(
         f"/api/v1/schools/{school_a}/registrations/students/{request_id}/approve",
@@ -245,7 +246,8 @@ def test_student_registration_code_pending_and_admin_approval(
         f"/api/v1/schools/{school_a}/enrollments",
         params={"class_group_id": group_id},
     ).json()
-    assert len(enrollments) == 1
+    assert len(enrollments["items"]) == 1
+    assert enrollments["meta"]["total"] == 1
 
     with session_local() as db:
         actions = set(db.scalars(select(AuditEvent.action)).all())
