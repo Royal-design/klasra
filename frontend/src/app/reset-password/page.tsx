@@ -3,11 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, KeyRound, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
@@ -16,12 +15,30 @@ import { extractFieldErrors, resetPasswordSchema } from "@/lib/validation";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const [token, setToken] = React.useState(searchParams.get("token") || "");
+  const token = (searchParams.get("token") || "").trim();
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState(false);
+
+  if (!token) {
+    return (
+      <div className="space-y-4 rounded-2xl border border-destructive/25 bg-destructive/5 p-5 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+        <p className="text-sm font-semibold text-foreground">
+          Invalid or missing reset link
+        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Open the password reset link directly from your email, or request a
+          fresh reset link below.
+        </p>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/forgot-password">Request New Reset Link</Link>
+        </Button>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -62,7 +79,7 @@ function ResetPasswordForm() {
       <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
         <p className="text-sm font-semibold text-foreground">
-          Password reset successful
+          Password updated successfully
         </p>
         <p className="text-xs text-muted-foreground">
           All previous sessions were signed out for your security.
@@ -76,21 +93,6 @@ function ResetPasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="token">Reset token</Label>
-        <Input
-          id="token"
-          placeholder="Paste reset token from your email"
-          value={token}
-          hasError={Boolean(fieldErrors.token)}
-          onChange={(e) => setToken(e.target.value)}
-          className="font-mono text-xs"
-        />
-        {fieldErrors.token && (
-          <p className="text-xs text-destructive">{fieldErrors.token}</p>
-        )}
-      </div>
-
       <div className="space-y-1.5">
         <Label htmlFor="newPassword">New password</Label>
         <PasswordInput

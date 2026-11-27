@@ -15,8 +15,9 @@ import { extractFieldErrors, studentRegisterSchema } from "@/lib/validation";
 
 function StudentRegisterForm() {
   const searchParams = useSearchParams();
+  const urlToken = (searchParams.get("token") || "").trim();
   const [codeOrToken, setCodeOrToken] = React.useState(
-    searchParams.get("code") || searchParams.get("token") || ""
+    urlToken || searchParams.get("code") || ""
   );
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -88,20 +89,22 @@ function StudentRegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="code">School registration code or invite token</Label>
-        <Input
-          id="code"
-          placeholder="e.g. SCH-2026-AB12"
-          value={codeOrToken}
-          hasError={Boolean(fieldErrors.codeOrToken)}
-          onChange={(e) => setCodeOrToken(e.target.value)}
-          className="font-mono text-xs"
-        />
-        {fieldErrors.codeOrToken && (
-          <p className="text-xs text-destructive">{fieldErrors.codeOrToken}</p>
-        )}
-      </div>
+      {!urlToken && (
+        <div className="space-y-1.5">
+          <Label htmlFor="code">School registration code</Label>
+          <Input
+            id="code"
+            placeholder="e.g. SCH-2026-AB12"
+            value={codeOrToken}
+            hasError={Boolean(fieldErrors.codeOrToken)}
+            onChange={(e) => setCodeOrToken(e.target.value)}
+            className="font-mono text-xs"
+          />
+          {fieldErrors.codeOrToken && (
+            <p className="text-xs text-destructive">{fieldErrors.codeOrToken}</p>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">

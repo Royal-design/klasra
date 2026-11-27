@@ -3,11 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
@@ -15,12 +14,30 @@ import { extractFieldErrors, staffAcceptSchema } from "@/lib/validation";
 
 function StaffAcceptForm() {
   const searchParams = useSearchParams();
-  const [token, setToken] = React.useState(searchParams.get("token") || "");
+  const token = (searchParams.get("token") || "").trim();
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [activated, setActivated] = React.useState(false);
+
+  if (!token) {
+    return (
+      <div className="space-y-4 rounded-2xl border border-destructive/25 bg-destructive/5 p-5 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
+        <p className="text-sm font-semibold text-foreground">
+          Invalid or missing invitation link
+        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Please open the activation link directly from your school invitation
+          email, or ask your School Administrator to resend it.
+        </p>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/login">Back to Sign In</Link>
+        </Button>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,7 +66,7 @@ function StaffAcceptForm() {
       toast.error(
         err instanceof ApiClientError
           ? err.message
-          : "Invitation token is invalid or expired."
+          : "Invitation link is invalid or expired."
       );
     } finally {
       setSubmitting(false);
@@ -75,21 +92,6 @@ function StaffAcceptForm() {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <div className="space-y-1.5">
-        <Label htmlFor="token">Staff invitation token</Label>
-        <Input
-          id="token"
-          placeholder="Paste invitation token from email"
-          value={token}
-          hasError={Boolean(fieldErrors.token)}
-          onChange={(e) => setToken(e.target.value)}
-          className="font-mono text-xs"
-        />
-        {fieldErrors.token && (
-          <p className="text-xs text-destructive">{fieldErrors.token}</p>
-        )}
-      </div>
-
       <div className="space-y-1.5">
         <Label htmlFor="password">Set your password</Label>
         <PasswordInput
