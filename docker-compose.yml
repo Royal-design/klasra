@@ -49,6 +49,13 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
 
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
 volumes:
   lms_pgdata:
   lms_uploads:

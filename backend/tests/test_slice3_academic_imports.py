@@ -423,3 +423,269 @@ def test_spreadsheet_import_validate_and_commit_csv_and_xlsx(
     assert commit_xlsx.status_code == 201, commit_xlsx.text
     assert commit_xlsx.json()["imported_users"] == 1
     assert commit_xlsx.json()["imported_enrollments"] == 1
+
+
+def test_academic_update_safe_delete_reorder_and_unassign(
+    env: tuple[TestClient, sessionmaker[Session], dict],
+) -> None:
+    client, session_local, ctx = env
+    school_a = ctx["school_a"]
+    school_b = ctx["school_b"]
+
+    csrf_a = _login(client, "admin@alpha.example.com", "SchoolAdminPass123!")
+
+    # Create Academic Year, Term, 3 Year Levels, Class Group, Subject, Teacher, Offering
+    year_id = client.post(
+        f"/api/v1/schools/{school_a}/academic-years",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "2026-2027", "start_date": "2026-09-01", "end_date": "2027-07-15"},
+    ).json()["id"]
+    term_id = client.post(
+        f"/api/v1/schools/{school_a}/terms",
+        headers={"X-CSRF-Token": csrf_a},
+        json={
+            "academic_year_id": year_id,
+            "name": "First Term",
+            "start_date": "2026-09-01",
+            "end_date": "2026-12-18",
+        },
+    ).json()["id"]
+    lvl_1 = client.post(
+        f"/api/v1/schools/{school_a}/year-levels",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS 1", "display_order": 1},
+    ).json()["id"]
+    lvl_2 = client.post(
+        f"/api/v1/schools/{school_a}/year-levels",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS 2", "display_order": 2},
+    ).json()["id"]
+    lvl_3 = client.post(
+        f"/api/v1/schools/{school_a}/year-levels",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS 3", "display_order": 3},
+    ).json()["id"]
+
+    # 1. Reorder Year Levels atomically
+    reorder_resp = client.put(
+        f"/api/v1/schools/{school_a}/year-levels/reorder",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"ordered_ids": [lvl_3, lvl_1, lvl_2]},
+    )
+    assert reorder_resp.status_code == 200, reorder_resp.text
+    reordered = reorder_resp.json()
+    assert [r["id"] for r in reordered] == [lvl_3, lvl_1, lvl_2]
+    assert [r["display_order"] for r in reordered] == [1, 2, 3]
+
+    # Reject duplicate IDs on reorder
+    dup_reorder = client.put(
+        f"/api/v1/schools/{school_a}/year-levels/reorder",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"ordered_ids": [lvl_1, lvl_1]},
+    )
+    assert dup_reorder.status_code == 422
+
+    # 2. Update Subject (code + name) and Class Group (name + year_level_id)
+    group_id = client.post(
+        f"/api/v1/schools/{school_a}/class-groups",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"academic_year_id": year_id, "year_level_id": lvl_1, "name": "JSS 1A"},
+    ).json()["id"]
+    patch_cg = client.patch(
+        f"/api/v1/schools/{school_a}/class-groups/{group_id}",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS 2A", "year_level_id": lvl_2},
+    )
+    assert patch_cg.status_code == 200
+    assert patch_cg.json()["name"] == "JSS 2A"
+    assert patch_cg.json()["year_level_id"] == lvl_2
+
+    subj_id = client.post(
+        f"/api/v1/schools/{school_a}/subjects",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"code": "MTH101", "name": "Maths"},
+    ).json()["id"]
+    patch_subj = client.patch(
+        f"/api/v1/schools/{school_a}/subjects/{subj_id}",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"code": "math101", "name": "Mathematics"},
+    )
+    assert patch_subj.status_code == 200
+    assert patch_subj.json()["code"] == "MATH101"
+    assert patch_subj.json()["name"] == "Mathematics"
+
+    # 3. Assign & Unassign teacher on a Subject Offering
+    teacher_id = client.post(
+        f"/api/v1/schools/{school_a}/users",
+        headers={"X-CSRF-Token": csrf_a},
+        json={
+            "email": "math.teacher@alpha.example.com",
+            "full_name": "Ada Teacher",
+            "password": "TeacherPassword123!",
+            "role": "teacher",
+        },
+    ).json()["user_id"]
+    offering_id = client.post(
+        f"/api/v1/schools/{school_a}/subject-offerings",
+        headers={"X-CSRF-Token": csrf_a},
+        json={
+            "class_group_id": group_id,
+            "subject_id": subj_id,
+            "term_id": term_id,
+            "teacher_user_ids": [teacher_id],
+        },
+    ).json()["id"]
+
+    unassign = client.delete(
+        f"/api/v1/schools/{school_a}/subject-offerings/{offering_id}/teachers/{teacher_id}",
+        headers={"X-CSRF-Token": csrf_a},
+    )
+    assert unassign.status_code == 200
+    assert unassign.json()["teacher_user_ids"] == []
+    assert unassign.json()["teachers"] == []
+
+    # 4. Safe delete blocks parents that have linked children (409 RESOURCE_IN_USE)
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/academic-years/{year_id}",
+            headers={"X-CSRF-Token": csrf_a},
+        ).status_code
+        == 409
+    )
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/terms/{term_id}",
+            headers={"X-CSRF-Token": csrf_a},
+        ).status_code
+        == 409
+    )
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/year-levels/{lvl_2}",
+            headers={"X-CSRF-Token": csrf_a},
+        ).status_code
+        == 409
+    )
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/class-groups/{group_id}",
+            headers={"X-CSRF-Token": csrf_a},
+        ).status_code
+        == 409
+    )
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/subjects/{subj_id}",
+            headers={"X-CSRF-Token": csrf_a},
+        ).status_code
+        == 409
+    )
+
+    # 5. Cross-school isolation: School B Admin cannot delete or reorder School A records
+    csrf_b = _login(client, "admin@beta.example.com", "SchoolAdminPass123!")
+    assert (
+        client.delete(
+            f"/api/v1/schools/{school_a}/year-levels/{lvl_3}",
+            headers={"X-CSRF-Token": csrf_b},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.put(
+            f"/api/v1/schools/{school_b}/year-levels/reorder",
+            headers={"X-CSRF-Token": csrf_b},
+            json={"ordered_ids": [lvl_1]},
+        ).status_code
+        == 404
+    )
+
+    # 6. Deleting bottom-up succeeds once unused (204)
+    csrf_a = _login(client, "admin@alpha.example.com", "SchoolAdminPass123!")
+    for path in [
+        f"/subject-offerings/{offering_id}",
+        f"/subjects/{subj_id}",
+        f"/class-groups/{group_id}",
+        f"/terms/{term_id}",
+        f"/year-levels/{lvl_3}",
+        f"/year-levels/{lvl_2}",
+        f"/year-levels/{lvl_1}",
+        f"/academic-years/{year_id}",
+    ]:
+        del_resp = client.delete(
+            f"/api/v1/schools/{school_a}{path}",
+            headers={"X-CSRF-Token": csrf_a},
+        )
+        assert del_resp.status_code == 204, f"Failed deleting {path}: {del_resp.text}"
+
+    with session_local() as db:
+        actions = set(db.scalars(select(AuditEvent.action)).all())
+    assert {
+        "year_level.reordered",
+        "offering_teacher.unassigned",
+        "subject_offering.deleted",
+        "subject.deleted",
+        "class_group.deleted",
+        "term.deleted",
+        "year_level.deleted",
+        "academic_year.deleted",
+    } <= actions
+
+
+def test_class_group_per_level_uniqueness_and_bulk_create(
+    env: tuple[TestClient, sessionmaker[Session], dict],
+) -> None:
+    client, _session_local, ctx = env
+    school_a = ctx["school_a"]
+    csrf_a = _login(client, "admin@alpha.example.com", "SchoolAdminPass123!")
+
+    year_id = client.post(
+        f"/api/v1/schools/{school_a}/academic-years",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "2026/2027", "start_date": "2026-09-01", "end_date": "2027-07-31"},
+    ).json()["id"]
+    jss1 = client.post(
+        f"/api/v1/schools/{school_a}/year-levels",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS1", "display_order": 1},
+    ).json()["id"]
+    jss2 = client.post(
+        f"/api/v1/schools/{school_a}/year-levels",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"name": "JSS2", "display_order": 2},
+    ).json()["id"]
+
+    # Same arm name ("Science") is allowed across different year levels
+    r1 = client.post(
+        f"/api/v1/schools/{school_a}/class-groups",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"academic_year_id": year_id, "year_level_id": jss1, "name": "Science"},
+    )
+    assert r1.status_code == 201
+    r2 = client.post(
+        f"/api/v1/schools/{school_a}/class-groups",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"academic_year_id": year_id, "year_level_id": jss2, "name": "Science"},
+    )
+    assert r2.status_code == 201
+
+    # Duplicate arm name within the SAME year level is still blocked (409)
+    dup = client.post(
+        f"/api/v1/schools/{school_a}/class-groups",
+        headers={"X-CSRF-Token": csrf_a},
+        json={"academic_year_id": year_id, "year_level_id": jss1, "name": "Science"},
+    )
+    assert dup.status_code == 409
+
+    # Bulk create across JSS1 & JSS2 for Science, Art, Commercial skips the 2 existing Science arms
+    bulk = client.post(
+        f"/api/v1/schools/{school_a}/class-groups/bulk",
+        headers={"X-CSRF-Token": csrf_a},
+        json={
+            "academic_year_id": year_id,
+            "year_level_ids": [jss1, jss2],
+            "names": ["Science", "Art", "Commercial"],
+        },
+    )
+    assert bulk.status_code == 201, bulk.text
+    assert len(bulk.json()["created"]) == 4
+    assert bulk.json()["skipped_existing"] == 2

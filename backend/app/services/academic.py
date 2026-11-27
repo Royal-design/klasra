@@ -17,6 +17,7 @@ from app.repositories import academic_repo, membership_repo
 from app.schemas.academic import (
     AcademicYearCreateRequest,
     AcademicYearUpdateRequest,
+    ClassGroupBulkCreateRequest,
     ClassGroupCreateRequest,
     ClassGroupUpdateRequest,
     EnrollmentCreateRequest,
@@ -32,6 +33,20 @@ from app.schemas.academic import (
     YearLevelUpdateRequest,
 )
 from app.services.audit import record_audit_event
+
+
+def _raise_if_in_use(resource_label: str, resource_name: str, counts: dict[str, int]) -> None:
+    linked = [f"{count} {label}" for label, count in counts.items() if count > 0]
+    if linked:
+        joined = ", ".join(linked)
+        raise AppError(
+            status_code=409,
+            code="RESOURCE_IN_USE",
+            message=(
+                f"Cannot delete {resource_label} '{resource_name}' because it is linked to "
+                f"{joined}. Remove linked records or archive it instead."
+            ),
+        )
 
 
 # --- Academic Years ---
@@ -121,6 +136,37 @@ def update_academic_year(
     return year
 
 
+def delete_academic_year(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    academic_year_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    year = academic_repo.get_academic_year(
+        db, school_id=school_id, academic_year_id=academic_year_id
+    )
+    if year is None:
+        raise AppError(404, "ACADEMIC_YEAR_NOT_FOUND", "Academic year not found.")
+
+    counts = academic_repo.count_academic_year_dependencies(
+        db, school_id=school_id, academic_year_id=year.id
+    )
+    _raise_if_in_use("academic year", year.name, counts)
+
+    record_audit_event(
+        db,
+        action="academic_year.deleted",
+        target_type="academic_year",
+        target_id=year.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"name": year.name},
+    )
+    db.delete(year)
+    db.commit()
+
+
 # --- Terms ---
 def create_term(
     db: Session,
@@ -203,6 +249,15 @@ def update_term(
         )
 
     if payload.name is not None:
+        existing = academic_repo.get_term_by_year_and_name(
+            db, school_id=school_id, academic_year_id=term.academic_year_id, name=payload.name
+        )
+        if existing is not None and existing.id != term.id:
+            raise AppError(
+                409,
+                "TERM_EXISTS",
+                "A term with this name already exists in this academic year.",
+            )
         term.name = payload.name.strip()
     term.start_date = new_start
     term.end_date = new_end
@@ -219,6 +274,35 @@ def update_term(
     db.commit()
     db.refresh(term)
     return term
+
+
+def delete_term(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    term_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    term = academic_repo.get_term(db, school_id=school_id, term_id=term_id)
+    if term is None:
+        raise AppError(404, "TERM_NOT_FOUND", "Term not found.")
+
+    counts = academic_repo.count_term_dependencies(
+        db, school_id=school_id, term_id=term.id
+    )
+    _raise_if_in_use("term", term.name, counts)
+
+    record_audit_event(
+        db,
+        action="term.deleted",
+        target_type="term",
+        target_id=term.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"name": term.name},
+    )
+    db.delete(term)
+    db.commit()
 
 
 # --- Year Levels ---
@@ -272,6 +356,15 @@ def update_year_level(
         raise AppError(404, "YEAR_LEVEL_NOT_FOUND", "Year level not found.")
 
     if payload.name is not None:
+        existing = academic_repo.get_year_level_by_name(
+            db, school_id=school_id, name=payload.name
+        )
+        if existing is not None and existing.id != level.id:
+            raise AppError(
+                409,
+                "YEAR_LEVEL_EXISTS",
+                "A year level with this name already exists in this school.",
+            )
         level.name = payload.name.strip()
     if payload.display_order is not None:
         level.display_order = payload.display_order
@@ -288,6 +381,82 @@ def update_year_level(
     db.commit()
     db.refresh(level)
     return level
+
+
+def reorder_year_levels(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    ordered_ids: list[uuid.UUID],
+    actor_user_id: uuid.UUID,
+) -> list[YearLevel]:
+    if len(set(ordered_ids)) != len(ordered_ids):
+        raise AppError(
+            422,
+            "DUPLICATE_YEAR_LEVEL_IDS",
+            "ordered_ids must not contain duplicate year level IDs.",
+        )
+
+    levels = academic_repo.list_all_year_levels(db, school_id=school_id)
+    by_id = {lvl.id: lvl for lvl in levels}
+
+    missing = [str(lid) for lid in ordered_ids if lid not in by_id]
+    if missing:
+        raise AppError(
+            404,
+            "YEAR_LEVEL_NOT_FOUND",
+            "One or more year levels were not found in this school.",
+        )
+
+    seen = set(ordered_ids)
+    remaining = [lvl.id for lvl in levels if lvl.id not in seen]
+    final_ids = [*ordered_ids, *remaining]
+
+    for index, lid in enumerate(final_ids, start=1):
+        by_id[lid].display_order = index
+
+    record_audit_event(
+        db,
+        action="year_level.reordered",
+        target_type="year_level",
+        target_id=school_id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"ordered_ids": [str(lid) for lid in final_ids]},
+    )
+    db.commit()
+    return academic_repo.list_all_year_levels(db, school_id=school_id)
+
+
+def delete_year_level(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    year_level_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    level = academic_repo.get_year_level(
+        db, school_id=school_id, year_level_id=year_level_id
+    )
+    if level is None:
+        raise AppError(404, "YEAR_LEVEL_NOT_FOUND", "Year level not found.")
+
+    counts = academic_repo.count_year_level_dependencies(
+        db, school_id=school_id, year_level_id=level.id
+    )
+    _raise_if_in_use("year level", level.name, counts)
+
+    record_audit_event(
+        db,
+        action="year_level.deleted",
+        target_type="year_level",
+        target_id=level.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"name": level.name},
+    )
+    db.delete(level)
+    db.commit()
 
 
 # --- Class Groups ---
@@ -310,13 +479,17 @@ def create_class_group(
     if level is None:
         raise AppError(404, "YEAR_LEVEL_NOT_FOUND", "Year level not found.")
 
-    if academic_repo.get_class_group_by_year_and_name(
-        db, school_id=school_id, academic_year_id=year.id, name=payload.name
+    if academic_repo.get_class_group_by_year_level_and_name(
+        db,
+        school_id=school_id,
+        academic_year_id=year.id,
+        year_level_id=level.id,
+        name=payload.name,
     ):
         raise AppError(
             409,
             "CLASS_GROUP_EXISTS",
-            "A class group with this name already exists in this academic year.",
+            f"A class group named '{payload.name.strip()}' already exists for {level.name} in this academic year.",
         )
 
     group = ClassGroup(
@@ -334,11 +507,102 @@ def create_class_group(
         target_id=group.id,
         actor_user_id=actor_user_id,
         school_id=school_id,
-        metadata={"name": group.name, "academic_year_id": str(year.id)},
+        metadata={
+            "name": group.name,
+            "academic_year_id": str(year.id),
+            "year_level_id": str(level.id),
+        },
     )
     db.commit()
     db.refresh(group)
     return group
+
+
+def bulk_create_class_groups(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    payload: ClassGroupBulkCreateRequest,
+    actor_user_id: uuid.UUID,
+) -> tuple[list[ClassGroup], int]:
+    year = academic_repo.get_academic_year(
+        db, school_id=school_id, academic_year_id=payload.academic_year_id
+    )
+    if year is None:
+        raise AppError(404, "ACADEMIC_YEAR_NOT_FOUND", "Academic year not found.")
+
+    unique_level_ids = list(dict.fromkeys(payload.year_level_ids))
+    levels: list[YearLevel] = []
+    for level_id in unique_level_ids:
+        level = academic_repo.get_year_level(
+            db, school_id=school_id, year_level_id=level_id
+        )
+        if level is None:
+            raise AppError(404, "YEAR_LEVEL_NOT_FOUND", "One or more year levels were not found.")
+        levels.append(level)
+
+    cleaned_names: list[str] = []
+    seen_lower: set[str] = set()
+    for raw in payload.names:
+        stripped = raw.strip()
+        if not stripped or len(stripped) > 100:
+            continue
+        key = stripped.lower()
+        if key not in seen_lower:
+            seen_lower.add(key)
+            cleaned_names.append(stripped)
+
+    if not cleaned_names:
+        raise AppError(
+            422,
+            "INVALID_CLASS_GROUP_NAMES",
+            "Provide at least one valid class group / arm name.",
+        )
+
+    created: list[ClassGroup] = []
+    skipped_existing = 0
+
+    for level in levels:
+        for name in cleaned_names:
+            existing = academic_repo.get_class_group_by_year_level_and_name(
+                db,
+                school_id=school_id,
+                academic_year_id=year.id,
+                year_level_id=level.id,
+                name=name,
+            )
+            if existing is not None:
+                skipped_existing += 1
+                continue
+            group = ClassGroup(
+                school_id=school_id,
+                academic_year_id=year.id,
+                year_level_id=level.id,
+                name=name,
+            )
+            db.add(group)
+            created.append(group)
+
+    db.flush()
+    if created:
+        record_audit_event(
+            db,
+            action="class_group.bulk_created",
+            target_type="class_group",
+            target_id=year.id,
+            actor_user_id=actor_user_id,
+            school_id=school_id,
+            metadata={
+                "academic_year_id": str(year.id),
+                "created_count": len(created),
+                "skipped_existing": skipped_existing,
+                "names": cleaned_names,
+            },
+        )
+    db.commit()
+    for group in created:
+        db.refresh(group)
+    return created, skipped_existing
 
 
 def update_class_group(
@@ -355,8 +619,34 @@ def update_class_group(
     if group is None:
         raise AppError(404, "CLASS_GROUP_NOT_FOUND", "Class group not found.")
 
-    if payload.name is not None:
-        group.name = payload.name.strip()
+    target_name = payload.name.strip() if payload.name is not None else group.name
+    target_level_id = (
+        payload.year_level_id if payload.year_level_id is not None else group.year_level_id
+    )
+
+    if payload.year_level_id is not None:
+        level = academic_repo.get_year_level(
+            db, school_id=school_id, year_level_id=payload.year_level_id
+        )
+        if level is None:
+            raise AppError(404, "YEAR_LEVEL_NOT_FOUND", "Year level not found.")
+
+    existing = academic_repo.get_class_group_by_year_level_and_name(
+        db,
+        school_id=school_id,
+        academic_year_id=group.academic_year_id,
+        year_level_id=target_level_id,
+        name=target_name,
+    )
+    if existing is not None and existing.id != group.id:
+        raise AppError(
+            409,
+            "CLASS_GROUP_EXISTS",
+            f"A class group named '{target_name}' already exists for this year level and academic year.",
+        )
+
+    group.name = target_name
+    group.year_level_id = target_level_id
 
     record_audit_event(
         db,
@@ -365,11 +655,42 @@ def update_class_group(
         target_id=group.id,
         actor_user_id=actor_user_id,
         school_id=school_id,
-        metadata={"name": group.name},
+        metadata={"name": group.name, "year_level_id": str(group.year_level_id)},
     )
     db.commit()
     db.refresh(group)
     return group
+
+
+def delete_class_group(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    class_group_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    group = academic_repo.get_class_group(
+        db, school_id=school_id, class_group_id=class_group_id
+    )
+    if group is None:
+        raise AppError(404, "CLASS_GROUP_NOT_FOUND", "Class group not found.")
+
+    counts = academic_repo.count_class_group_dependencies(
+        db, school_id=school_id, class_group_id=group.id
+    )
+    _raise_if_in_use("class group", group.name, counts)
+
+    record_audit_event(
+        db,
+        action="class_group.deleted",
+        target_type="class_group",
+        target_id=group.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"name": group.name},
+    )
+    db.delete(group)
+    db.commit()
 
 
 # --- Subjects ---
@@ -419,6 +740,16 @@ def update_subject(
     if subject is None:
         raise AppError(404, "SUBJECT_NOT_FOUND", "Subject not found.")
 
+    if payload.code is not None:
+        code = payload.code.strip().upper()
+        existing = academic_repo.get_subject_by_code(db, school_id=school_id, code=code)
+        if existing is not None and existing.id != subject.id:
+            raise AppError(
+                409,
+                "SUBJECT_CODE_EXISTS",
+                "A subject with this code already exists in this school.",
+            )
+        subject.code = code
     if payload.name is not None:
         subject.name = payload.name.strip()
 
@@ -434,6 +765,37 @@ def update_subject(
     db.commit()
     db.refresh(subject)
     return subject
+
+
+def delete_subject(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    subject_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    subject = academic_repo.get_subject(
+        db, school_id=school_id, subject_id=subject_id
+    )
+    if subject is None:
+        raise AppError(404, "SUBJECT_NOT_FOUND", "Subject not found.")
+
+    counts = academic_repo.count_subject_dependencies(
+        db, school_id=school_id, subject_id=subject.id
+    )
+    _raise_if_in_use("subject", f"{subject.code} ({subject.name})", counts)
+
+    record_audit_event(
+        db,
+        action="subject.deleted",
+        target_type="subject",
+        target_id=subject.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"code": subject.code, "name": subject.name},
+    )
+    db.delete(subject)
+    db.commit()
 
 
 # --- Subject Offerings & Teacher Assignments ---
@@ -618,10 +980,91 @@ def assign_teacher_to_offering(
         metadata={"teacher_user_id": str(teacher_user_id)},
     )
     db.commit()
+    db.refresh(offering)
     teacher_ids = academic_repo.list_offering_teacher_ids(
         db, school_id=school_id, subject_offering_id=offering.id
     )
     return offering, teacher_ids
+
+
+def unassign_teacher_from_offering(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    offering_id: uuid.UUID,
+    teacher_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> tuple[SubjectOffering, list[uuid.UUID]]:
+    offering = academic_repo.get_subject_offering(
+        db, school_id=school_id, offering_id=offering_id
+    )
+    if offering is None:
+        raise AppError(404, "SUBJECT_OFFERING_NOT_FOUND", "Subject offering not found.")
+
+    assignment = academic_repo.get_offering_teacher(
+        db,
+        school_id=school_id,
+        subject_offering_id=offering.id,
+        teacher_user_id=teacher_user_id,
+    )
+    if assignment is None:
+        raise AppError(
+            404,
+            "TEACHER_ASSIGNMENT_NOT_FOUND",
+            "Teacher is not assigned to this subject offering.",
+        )
+
+    db.delete(assignment)
+    record_audit_event(
+        db,
+        action="offering_teacher.unassigned",
+        target_type="subject_offering",
+        target_id=offering.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={"teacher_user_id": str(teacher_user_id)},
+    )
+    db.commit()
+    db.refresh(offering)
+    teacher_ids = academic_repo.list_offering_teacher_ids(
+        db, school_id=school_id, subject_offering_id=offering.id
+    )
+    return offering, teacher_ids
+
+
+def delete_subject_offering(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    offering_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> None:
+    offering = academic_repo.get_subject_offering(
+        db, school_id=school_id, offering_id=offering_id
+    )
+    if offering is None:
+        raise AppError(404, "SUBJECT_OFFERING_NOT_FOUND", "Subject offering not found.")
+
+    counts = academic_repo.count_subject_offering_dependencies(
+        db, school_id=school_id, offering_id=offering.id
+    )
+    label = offering.subject.name if offering.subject else str(offering.id)
+    _raise_if_in_use("subject offering", label, counts)
+
+    record_audit_event(
+        db,
+        action="subject_offering.deleted",
+        target_type="subject_offering",
+        target_id=offering.id,
+        actor_user_id=actor_user_id,
+        school_id=school_id,
+        metadata={
+            "class_group_id": str(offering.class_group_id),
+            "subject_id": str(offering.subject_id),
+        },
+    )
+    db.delete(offering)
+    db.commit()
 
 
 # --- Enrollments (SCH-04: preserve history on transfer & withdrawal) ---

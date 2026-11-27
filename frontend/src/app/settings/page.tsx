@@ -101,7 +101,13 @@ export default function PersonalSettingsPage() {
                   <Label htmlFor="prof-email">Email address</Label>
                   <Input id="prof-email" value={user?.email || ""} disabled />
                   <p className="text-[11px] text-muted-foreground">
-                    Email changes are managed by your school administrator.
+                    {user?.is_platform_admin
+                      ? "Platform administrator email addresses are managed by system operations."
+                      : (user?.memberships || []).some(
+                            (m) => m.role === "school_admin" && m.status === "active"
+                          )
+                        ? "Email changes are managed by your platform administrator."
+                        : "Email changes are managed by your school administrator."}
                   </p>
                 </div>
                 <Button type="submit" disabled={updateMutation.isPending}>

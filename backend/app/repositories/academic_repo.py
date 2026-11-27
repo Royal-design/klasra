@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.academic import (
@@ -13,6 +13,10 @@ from app.models.academic import (
     Term,
     YearLevel,
 )
+from app.models.assessment import Assessment
+from app.models.assignment import Assignment
+from app.models.attendance import AttendanceRecord
+from app.models.lesson import Lesson
 from app.repositories.pagination import count_and_paginate_scalars, escape_like
 
 
@@ -158,6 +162,24 @@ def get_class_group_by_year_and_name(
     )
 
 
+def get_class_group_by_year_level_and_name(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    academic_year_id: uuid.UUID,
+    year_level_id: uuid.UUID,
+    name: str,
+) -> ClassGroup | None:
+    return db.scalar(
+        select(ClassGroup).where(
+            ClassGroup.school_id == school_id,
+            ClassGroup.academic_year_id == academic_year_id,
+            ClassGroup.year_level_id == year_level_id,
+            ClassGroup.name == name.strip(),
+        )
+    )
+
+
 def list_class_groups(
     db: Session,
     *,
@@ -168,7 +190,11 @@ def list_class_groups(
     offset: int = 0,
     limit: int = 20,
 ) -> tuple[list[ClassGroup], int]:
-    stmt = select(ClassGroup).where(ClassGroup.school_id == school_id)
+    stmt = (
+        select(ClassGroup)
+        .join(YearLevel, ClassGroup.year_level_id == YearLevel.id)
+        .where(ClassGroup.school_id == school_id)
+    )
     if academic_year_id is not None:
         stmt = stmt.where(ClassGroup.academic_year_id == academic_year_id)
     if year_level_id is not None:
@@ -176,7 +202,9 @@ def list_class_groups(
     if q and q.strip():
         pattern = f"%{escape_like(q.strip())}%"
         stmt = stmt.where(ClassGroup.name.ilike(pattern, escape="\\"))
-    stmt = stmt.order_by(ClassGroup.name.asc())
+    stmt = stmt.order_by(
+        YearLevel.display_order.asc(), YearLevel.name.asc(), ClassGroup.name.asc()
+    )
     return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
 
 
@@ -362,3 +390,140 @@ def list_enrollments(
         stmt = stmt.where(Enrollment.status == status)
     stmt = stmt.order_by(Enrollment.created_at.desc())
     return count_and_paginate_scalars(db, stmt, offset=offset, limit=limit)
+
+
+def list_all_year_levels(db: Session, *, school_id: uuid.UUID) -> list[YearLevel]:
+    return list(
+        db.scalars(
+            select(YearLevel)
+            .where(YearLevel.school_id == school_id)
+            .order_by(YearLevel.display_order.asc(), YearLevel.name.asc())
+        ).all()
+    )
+
+
+# --- Safe-delete dependency counts (school-scoped) ---
+def count_academic_year_dependencies(
+    db: Session, *, school_id: uuid.UUID, academic_year_id: uuid.UUID
+) -> dict[str, int]:
+    terms = db.scalar(
+        select(func.count(Term.id)).where(
+            Term.school_id == school_id, Term.academic_year_id == academic_year_id
+        )
+    ) or 0
+    class_groups = db.scalar(
+        select(func.count(ClassGroup.id)).where(
+            ClassGroup.school_id == school_id,
+            ClassGroup.academic_year_id == academic_year_id,
+        )
+    ) or 0
+    enrollments = db.scalar(
+        select(func.count(Enrollment.id)).where(
+            Enrollment.school_id == school_id,
+            Enrollment.academic_year_id == academic_year_id,
+        )
+    ) or 0
+    return {
+        "terms": int(terms),
+        "class groups": int(class_groups),
+        "enrollments": int(enrollments),
+    }
+
+
+def count_term_dependencies(
+    db: Session, *, school_id: uuid.UUID, term_id: uuid.UUID
+) -> dict[str, int]:
+    offerings = db.scalar(
+        select(func.count(SubjectOffering.id)).where(
+            SubjectOffering.school_id == school_id,
+            SubjectOffering.term_id == term_id,
+        )
+    ) or 0
+    return {"subject offerings": int(offerings)}
+
+
+def count_year_level_dependencies(
+    db: Session, *, school_id: uuid.UUID, year_level_id: uuid.UUID
+) -> dict[str, int]:
+    class_groups = db.scalar(
+        select(func.count(ClassGroup.id)).where(
+            ClassGroup.school_id == school_id,
+            ClassGroup.year_level_id == year_level_id,
+        )
+    ) or 0
+    return {"class groups": int(class_groups)}
+
+
+def count_class_group_dependencies(
+    db: Session, *, school_id: uuid.UUID, class_group_id: uuid.UUID
+) -> dict[str, int]:
+    offerings = db.scalar(
+        select(func.count(SubjectOffering.id)).where(
+            SubjectOffering.school_id == school_id,
+            SubjectOffering.class_group_id == class_group_id,
+        )
+    ) or 0
+    enrollments = db.scalar(
+        select(func.count(Enrollment.id)).where(
+            Enrollment.school_id == school_id,
+            Enrollment.class_group_id == class_group_id,
+        )
+    ) or 0
+    return {
+        "subject offerings": int(offerings),
+        "enrollments": int(enrollments),
+    }
+
+
+def count_subject_dependencies(
+    db: Session, *, school_id: uuid.UUID, subject_id: uuid.UUID
+) -> dict[str, int]:
+    offerings = db.scalar(
+        select(func.count(SubjectOffering.id)).where(
+            SubjectOffering.school_id == school_id,
+            SubjectOffering.subject_id == subject_id,
+        )
+    ) or 0
+    return {"subject offerings": int(offerings)}
+
+
+def count_subject_offering_dependencies(
+    db: Session, *, school_id: uuid.UUID, offering_id: uuid.UUID
+) -> dict[str, int]:
+    enrollments = db.scalar(
+        select(func.count(Enrollment.id)).where(
+            Enrollment.school_id == school_id,
+            Enrollment.subject_offering_id == offering_id,
+        )
+    ) or 0
+    lessons = db.scalar(
+        select(func.count(Lesson.id)).where(
+            Lesson.school_id == school_id,
+            Lesson.subject_offering_id == offering_id,
+        )
+    ) or 0
+    assignments = db.scalar(
+        select(func.count(Assignment.id)).where(
+            Assignment.school_id == school_id,
+            Assignment.subject_offering_id == offering_id,
+        )
+    ) or 0
+    attendance = db.scalar(
+        select(func.count(AttendanceRecord.id)).where(
+            AttendanceRecord.school_id == school_id,
+            AttendanceRecord.subject_offering_id == offering_id,
+        )
+    ) or 0
+    assessments = db.scalar(
+        select(func.count(Assessment.id)).where(
+            Assessment.school_id == school_id,
+            Assessment.subject_offering_id == offering_id,
+        )
+    ) or 0
+    return {
+        "enrollments": int(enrollments),
+        "lessons": int(lessons),
+        "assignments": int(assignments),
+        "attendance records": int(attendance),
+        "assessments": int(assessments),
+    }

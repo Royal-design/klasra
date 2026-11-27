@@ -37,10 +37,15 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 120
     login_rate_limit_per_minute: int = 15
 
-    # Transactional email provider (Resend in staging/production; console in dev/test)
-    email_provider: Literal["console", "resend"] = "console"
+    # Transactional email provider (Resend in staging/production; smtp/Mailpit or console in dev/test)
+    email_provider: Literal["console", "smtp", "resend"] = "console"
     resend_api_key: str | None = None
     email_from: str | None = None
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = 1025
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = False
     frontend_base_url: str = "http://localhost:3000"
 
     # Secure file upload storage (local for dev/tests; s3 for Backblaze B2 / Cloudflare R2 / AWS S3)
@@ -67,6 +72,15 @@ class Settings(BaseSettings):
             if not self.email_from or not self.email_from.strip():
                 raise ValueError(
                     "EMAIL_FROM is required when EMAIL_PROVIDER is set to 'resend'."
+                )
+        if self.email_provider == "smtp":
+            if not self.smtp_host or not self.smtp_host.strip():
+                raise ValueError(
+                    "SMTP_HOST is required when EMAIL_PROVIDER is set to 'smtp'."
+                )
+            if not self.email_from or not self.email_from.strip():
+                raise ValueError(
+                    "EMAIL_FROM is required when EMAIL_PROVIDER is set to 'smtp'."
                 )
         if self.storage_provider == "s3":
             missing = [

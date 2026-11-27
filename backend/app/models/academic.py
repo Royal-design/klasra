@@ -83,7 +83,11 @@ class ClassGroup(Base):
     __tablename__ = "class_groups"
     __table_args__ = (
         UniqueConstraint(
-            "school_id", "academic_year_id", "name", name="uq_class_groups_school_year_name"
+            "school_id",
+            "academic_year_id",
+            "year_level_id",
+            "name",
+            name="uq_class_groups_school_year_level_name",
         ),
     )
 

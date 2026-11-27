@@ -10,6 +10,8 @@ from app.schemas.academic import (
     AcademicYearCreateRequest,
     AcademicYearResponse,
     AcademicYearUpdateRequest,
+    ClassGroupBulkCreateRequest,
+    ClassGroupBulkCreateResponse,
     ClassGroupCreateRequest,
     ClassGroupResponse,
     ClassGroupUpdateRequest,
@@ -30,6 +32,7 @@ from app.schemas.academic import (
     TermResponse,
     TermUpdateRequest,
     YearLevelCreateRequest,
+    YearLevelReorderRequest,
     YearLevelResponse,
     YearLevelUpdateRequest,
 )
@@ -189,6 +192,23 @@ def update_academic_year_endpoint(
     return AcademicYearResponse.model_validate(year)
 
 
+@router.delete(
+    "/academic-years/{academic_year_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_academic_year_endpoint(
+    academic_year_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_academic_year(
+        db,
+        school_id=school_auth.school.id,
+        academic_year_id=academic_year_id,
+        actor_user_id=school_auth.user.id,
+    )
+
+
 # --- Terms ---
 @router.post(
     "/terms",
@@ -249,6 +269,23 @@ def update_term_endpoint(
     return _to_term_response(term)
 
 
+@router.delete(
+    "/terms/{term_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_term_endpoint(
+    term_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_term(
+        db,
+        school_id=school_auth.school.id,
+        term_id=term_id,
+        actor_user_id=school_auth.user.id,
+    )
+
+
 # --- Year Levels ---
 @router.post(
     "/year-levels",
@@ -290,6 +327,21 @@ def list_year_levels_endpoint(
     )
 
 
+@router.put("/year-levels/reorder", response_model=list[YearLevelResponse])
+def reorder_year_levels_endpoint(
+    payload: YearLevelReorderRequest,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> list[YearLevelResponse]:
+    levels = academic_service.reorder_year_levels(
+        db,
+        school_id=school_auth.school.id,
+        ordered_ids=payload.ordered_ids,
+        actor_user_id=school_auth.user.id,
+    )
+    return [YearLevelResponse.model_validate(lvl) for lvl in levels]
+
+
 @router.patch("/year-levels/{year_level_id}", response_model=YearLevelResponse)
 def update_year_level_endpoint(
     year_level_id: uuid.UUID,
@@ -305,6 +357,23 @@ def update_year_level_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return YearLevelResponse.model_validate(level)
+
+
+@router.delete(
+    "/year-levels/{year_level_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_year_level_endpoint(
+    year_level_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_year_level(
+        db,
+        school_id=school_auth.school.id,
+        year_level_id=year_level_id,
+        actor_user_id=school_auth.user.id,
+    )
 
 
 # --- Class Groups ---
@@ -325,6 +394,28 @@ def create_class_group_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return _to_class_group_response(group)
+
+
+@router.post(
+    "/class-groups/bulk",
+    response_model=ClassGroupBulkCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def bulk_create_class_groups_endpoint(
+    payload: ClassGroupBulkCreateRequest,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> ClassGroupBulkCreateResponse:
+    created, skipped_existing = academic_service.bulk_create_class_groups(
+        db,
+        school_id=school_auth.school.id,
+        payload=payload,
+        actor_user_id=school_auth.user.id,
+    )
+    return ClassGroupBulkCreateResponse(
+        created=[_to_class_group_response(g) for g in created],
+        skipped_existing=skipped_existing,
+    )
 
 
 @router.get("/class-groups", response_model=PaginatedResponse[ClassGroupResponse])
@@ -367,6 +458,23 @@ def update_class_group_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return _to_class_group_response(group)
+
+
+@router.delete(
+    "/class-groups/{class_group_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_class_group_endpoint(
+    class_group_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_class_group(
+        db,
+        school_id=school_auth.school.id,
+        class_group_id=class_group_id,
+        actor_user_id=school_auth.user.id,
+    )
 
 
 # --- Subjects ---
@@ -425,6 +533,23 @@ def update_subject_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return SubjectResponse.model_validate(subject)
+
+
+@router.delete(
+    "/subjects/{subject_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_subject_endpoint(
+    subject_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_subject(
+        db,
+        school_id=school_auth.school.id,
+        subject_id=subject_id,
+        actor_user_id=school_auth.user.id,
+    )
 
 
 # --- Subject Offerings & Teacher Assignments ---
@@ -518,6 +643,43 @@ def assign_offering_teacher_endpoint(
         actor_user_id=school_auth.user.id,
     )
     return _to_offering_response(offering, teacher_ids)
+
+
+@router.delete(
+    "/subject-offerings/{offering_id}/teachers/{teacher_user_id}",
+    response_model=SubjectOfferingResponse,
+)
+def unassign_offering_teacher_endpoint(
+    offering_id: uuid.UUID,
+    teacher_user_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> SubjectOfferingResponse:
+    offering, teacher_ids = academic_service.unassign_teacher_from_offering(
+        db,
+        school_id=school_auth.school.id,
+        offering_id=offering_id,
+        teacher_user_id=teacher_user_id,
+        actor_user_id=school_auth.user.id,
+    )
+    return _to_offering_response(offering, teacher_ids)
+
+
+@router.delete(
+    "/subject-offerings/{offering_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_subject_offering_endpoint(
+    offering_id: uuid.UUID,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    academic_service.delete_subject_offering(
+        db,
+        school_id=school_auth.school.id,
+        offering_id=offering_id,
+        actor_user_id=school_auth.user.id,
+    )
 
 
 # --- Enrollments (SCH-04) ---

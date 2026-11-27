@@ -94,6 +94,10 @@ class YearLevelUpdateRequest(BaseModel):
     display_order: int | None = Field(default=None, ge=0, le=1000)
 
 
+class YearLevelReorderRequest(BaseModel):
+    ordered_ids: list[uuid.UUID] = Field(min_length=1)
+
+
 class YearLevelResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -112,8 +116,15 @@ class ClassGroupCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+class ClassGroupBulkCreateRequest(BaseModel):
+    academic_year_id: uuid.UUID
+    year_level_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+    names: list[str] = Field(min_length=1, max_length=30)
+
+
 class ClassGroupUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
+    year_level_id: uuid.UUID | None = None
 
 
 class ClassGroupResponse(BaseModel):
@@ -128,6 +139,11 @@ class ClassGroupResponse(BaseModel):
     name: str
     created_at: datetime
     updated_at: datetime
+
+
+class ClassGroupBulkCreateResponse(BaseModel):
+    created: list[ClassGroupResponse]
+    skipped_existing: int
 
 
 # --- Subjects ---
@@ -147,7 +163,22 @@ class SubjectCreateRequest(BaseModel):
 
 
 class SubjectUpdateRequest(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=30)
     name: str | None = Field(default=None, min_length=2, max_length=150)
+
+    @field_validator("code")
+    @classmethod
+    def clean_code(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_upper_code(value)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return normalize_required_text(value)
 
 
 class SubjectResponse(BaseModel):

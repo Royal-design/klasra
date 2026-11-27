@@ -116,17 +116,19 @@ This document specifies the HTTP API exposed by `backend/` for the planned Next.
 
 ### Academic Structure, Offerings & Enrollments — School Admin (Slice 3 — `SCH-02`, `SCH-03`, `SCH-04`)
 
-All endpoints below require an active **`school_admin`** membership in `{school_id}` (+ `X-CSRF-Token` on `POST`/`PATCH`). Cross-school references fail closed (`403` / `404` / `422`).
+All endpoints below require an active **`school_admin`** membership in `{school_id}` (+ `X-CSRF-Token` on `POST`/`PUT`/`PATCH`/`DELETE`). Cross-school references fail closed (`403` / `404` / `422`). Safe `DELETE` endpoints return `204` when unused and `409 RESOURCE_IN_USE` when linked child records exist.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/academic-years` (`/{academic_year_id}`) | Create, list, and update academic years (`end_date > start_date`, unique name per school). |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/terms` (`/{term_id}`) | Create, list (optional `?academic_year_id=`), and update terms (must fall inside academic year dates). |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/year-levels` (`/{year_level_id}`) | Create, list, and update year levels/forms (`display_order`). |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/class-groups` (`/{class_group_id}`) | Create, list (optional `?academic_year_id=`), and update class groups/sections. |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subjects` (`/{subject_id}`) | Create, list, and update subjects (unique uppercase `code` per school). |
-| `POST` / `GET` / `PATCH` | `/api/v1/schools/{school_id}/subject-offerings` (`/{offering_id}`) | Create, list (optional `?class_group_id=`), and update subject offerings with initial active teachers. |
-| `POST` | `/api/v1/schools/{school_id}/subject-offerings/{offering_id}/teachers` | Assign an active school teacher to a subject offering (audited). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/academic-years` (`/{academic_year_id}`) | Create, list, update (including `active`/`archived`), and safe-delete unused academic years (`end_date > start_date`, unique name per school). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/terms` (`/{term_id}`) | Create, list (optional `?academic_year_id=`), update, and safe-delete unused terms (must fall inside academic year dates). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/year-levels` (`/{year_level_id}`) | Create, list, update, and safe-delete unused year levels/forms (`display_order`). |
+| `PUT` | `/api/v1/schools/{school_id}/year-levels/reorder` | Atomically reorder school year levels (`{ ordered_ids: [...] }`, audited). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/class-groups` (`/{class_group_id}`) | Create, list (optional `?academic_year_id=`, `?year_level_id=`), update (`name`, `year_level_id`), and safe-delete unused class groups/arms (unique per `academic_year_id` + `year_level_id` + `name`). |
+| `POST` | `/api/v1/schools/{school_id}/class-groups/bulk` | Bulk-create arms/streams across multiple year levels in one academic year, skipping existing combinations (audited). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/subjects` (`/{subject_id}`) | Create, list, update (`code`, `name`), and safe-delete unused subjects (unique uppercase `code` per school). |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/schools/{school_id}/subject-offerings` (`/{offering_id}`) | Create, list (optional `?class_group_id=`), update (`active`/`archived`), and safe-delete unused subject offerings. |
+| `POST` / `DELETE` | `/api/v1/schools/{school_id}/subject-offerings/{offering_id}/teachers` (`/{teacher_user_id}`) | Assign or unassign an active school teacher on a subject offering (audited). |
 | `POST` / `GET` | `/api/v1/schools/{school_id}/enrollments` | Enroll an active school student into a class group (and optional subject offering); list enrollments with filters (`student_user_id`, `class_group_id`, `status`). |
 | `POST` | `/api/v1/schools/{school_id}/enrollments/{enrollment_id}/transfer` | Mark active enrollment `transferred` with `effective_to` and create a new `active` enrollment row (history preserved, audited). |
 | `POST` | `/api/v1/schools/{school_id}/enrollments/{enrollment_id}/withdraw` | Mark active enrollment `withdrawn` with `effective_to` (history preserved, audited). |

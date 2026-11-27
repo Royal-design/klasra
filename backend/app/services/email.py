@@ -1,5 +1,7 @@
 import logging
+import smtplib
 from dataclasses import dataclass
+from email.message import EmailMessage as MimeEmailMessage
 from typing import Protocol
 
 import httpx
@@ -75,11 +77,59 @@ class ResendEmailProvider:
             raise RuntimeError(f"Resend API error (status={response.status_code})")
 
 
+class SmtpEmailProvider:
+    """SMTP email delivery (works with local Mailpit, Mailtrap, Brevo SMTP, Gmail SMTP)."""
+
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        email_from: str,
+        username: str | None = None,
+        password: str | None = None,
+        use_tls: bool = False,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        self._host = host
+        self._port = port
+        self._email_from = email_from
+        self._username = username
+        self._password = password
+        self._use_tls = use_tls
+        self._timeout = timeout_seconds
+
+    def send_email(self, message: EmailMessage) -> None:
+        mime = MimeEmailMessage()
+        mime["From"] = self._email_from
+        mime["To"] = message.to
+        mime["Subject"] = message.subject
+        mime.set_content(message.text)
+        mime.add_alternative(message.html, subtype="html")
+
+        with smtplib.SMTP(self._host, self._port, timeout=self._timeout) as client:
+            if self._use_tls:
+                client.starttls()
+            if self._username and self._password:
+                client.login(self._username, self._password)
+            client.send_message(mime)
+
+
 def build_email_provider(settings: Settings) -> EmailProvider:
     if settings.email_provider == "resend":
         assert settings.resend_api_key and settings.email_from
         return ResendEmailProvider(
             api_key=settings.resend_api_key,
             email_from=settings.email_from,
+        )
+    if settings.email_provider == "smtp":
+        assert settings.smtp_host and settings.email_from
+        return SmtpEmailProvider(
+            host=settings.smtp_host,
+            port=settings.smtp_port,
+            email_from=settings.email_from,
+            username=settings.smtp_username,
+            password=settings.smtp_password,
+            use_tls=settings.smtp_use_tls,
         )
     return ConsoleEmailProvider()
