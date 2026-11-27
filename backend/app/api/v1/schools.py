@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import (
@@ -24,7 +24,12 @@ from app.schemas.school import (
     SchoolResponse,
     SchoolUpdateRequest,
 )
-from app.services.school import create_school_with_admin, list_schools, update_school
+from app.services.school import (
+    create_school_with_admin,
+    delete_school,
+    list_schools,
+    update_school,
+)
 
 router = APIRouter(prefix="/schools", tags=["schools"])
 
@@ -97,3 +102,23 @@ def update_school_endpoint(
         db, school_id=school_id, payload=payload, actor_user_id=auth.user.id
     )
     return SchoolResponse.model_validate(school)
+
+
+@router.delete(
+    "/{school_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a suspended school after slug confirmation (Platform Admin)",
+)
+def delete_school_endpoint(
+    school_id: uuid.UUID,
+    confirm_slug: str = Query(..., min_length=2, max_length=100),
+    auth: AuthContext = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    delete_school(
+        db,
+        school_id=school_id,
+        confirm_slug=confirm_slug,
+        actor_user_id=auth.user.id,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,12 +1,15 @@
 import html
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.core.security import hash_password
+from app.core.security import generate_token, hash_password, hash_token
 from app.models.membership import SchoolMembership
+from app.models.password_reset import PasswordResetToken
 from app.models.school import School
 from app.models.user import User
 from app.repositories import membership_repo, school_repo, user_repo
@@ -73,13 +76,24 @@ def create_school_with_admin(
         },
     )
 
+    raw_setup_token = generate_token(32)
+    db.add(
+        PasswordResetToken(
+            user_id=admin_user.id,
+            token_hash=hash_token(raw_setup_token),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+        )
+    )
+
     db.commit()
     db.refresh(school)
     db.refresh(admin_user)
     db.refresh(membership)
 
     if email_provider is not None:
-        login_url = f"{frontend_base_url.rstrip('/')}/login"
+        base = frontend_base_url.rstrip("/")
+        login_url = f"{base}/login"
+        set_pw_url = f"{base}/reset-password?{urlencode({'token': raw_setup_token})}"
         message = EmailMessage(
             to=admin_user.email,
             subject=f"Welcome to Klasra — {school.name} is ready",
@@ -87,17 +101,17 @@ def create_school_with_admin(
                 f"Hello {admin_user.full_name},\n\n"
                 f"Your school workspace for {school.name} (/{school.slug}) has been created on Klasra.\n"
                 f"You have been assigned as the School Administrator.\n\n"
-                f"Sign in here: {login_url}\n\n"
-                "For security, your password was not included in this email. "
-                "Use the password set during onboarding or request a password reset on the sign-in page."
+                f"Set your own private password immediately (24-hour single-use link):\n"
+                f"{set_pw_url}\n\n"
+                f"Or sign in directly at: {login_url}\n"
             ),
             html=(
                 f"<p>Hello {html.escape(admin_user.full_name)},</p>"
                 f"<p>Your school workspace for <strong>{html.escape(school.name)}</strong> "
                 f"(<code>/{html.escape(school.slug)}</code>) has been created on <strong>Klasra</strong>.</p>"
                 f"<p>You have been assigned as the <strong>School Administrator</strong>.</p>"
-                f'<p><a href="{html.escape(login_url)}">Sign in to Klasra</a></p>'
-                "<p>For your security, your password is not included in this email.</p>"
+                f'<p><a href="{html.escape(set_pw_url)}">Set your own private password (24h link)</a></p>'
+                f'<p>Or sign in directly at <a href="{html.escape(login_url)}">{html.escape(login_url)}</a>.</p>'
             ),
         )
         try:
@@ -161,3 +175,47 @@ def update_school(
         db.refresh(school)
 
     return school
+
+
+def delete_school(
+    db: Session,
+    *,
+    school_id: uuid.UUID,
+    confirm_slug: str,
+    actor_user_id: uuid.UUID,
+) -> None:
+    """Guarded permanent deletion: school must be suspended first and slug must match."""
+    school = school_repo.get_school_by_id(db, school_id=school_id)
+    if school is None:
+        raise AppError(
+            status_code=404,
+            code="SCHOOL_NOT_FOUND",
+            message="School not found.",
+        )
+
+    if school.status != "suspended":
+        raise AppError(
+            status_code=409,
+            code="SCHOOL_MUST_BE_SUSPENDED",
+            message="Suspend the school before permanently deleting it.",
+        )
+
+    if confirm_slug.strip().lower() != school.slug:
+        raise AppError(
+            status_code=422,
+            code="SLUG_CONFIRMATION_MISMATCH",
+            message="Confirmation slug does not match this school.",
+        )
+
+    # Record platform-level audit event (school_id=None so it is retained after cascade delete)
+    record_audit_event(
+        db,
+        action="school.deleted",
+        target_type="school",
+        target_id=school.id,
+        actor_user_id=actor_user_id,
+        school_id=None,
+        metadata={"deleted_school_id": str(school.id), "name": school.name, "slug": school.slug},
+    )
+    db.delete(school)
+    db.commit()

@@ -9,6 +9,7 @@ import {
   Search,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -63,6 +64,8 @@ export default function PlatformSchoolsPage() {
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<School | null>(null);
+  const [deleteConfirmSlug, setDeleteConfirmSlug] = React.useState("");
 
   // Create form state
   const [name, setName] = React.useState("");
@@ -139,6 +142,25 @@ export default function PlatformSchoolsPage() {
     onError: (err) => {
       toast.error(
         err instanceof ApiClientError ? err.message : "Could not update school."
+      );
+    },
+  });
+
+  const deleteSchoolMutation = useMutation({
+    mutationFn: ({ schoolId, confirmSlug }: { schoolId: string; confirmSlug: string }) =>
+      apiRequest(
+        `/schools/${schoolId}?confirm_slug=${encodeURIComponent(confirmSlug)}`,
+        { method: "DELETE" }
+      ),
+    onSuccess: () => {
+      toast.success(`School "${deleteTarget?.name}" permanently deleted.`);
+      setDeleteTarget(null);
+      setDeleteConfirmSlug("");
+      queryClient.invalidateQueries({ queryKey: ["platform", "schools"] });
+    },
+    onError: (err) => {
+      toast.error(
+        err instanceof ApiClientError ? err.message : "Could not delete school."
       );
     },
   });
@@ -270,30 +292,45 @@ export default function PlatformSchoolsPage() {
                       <span className="font-mono text-[11px] text-muted-foreground">
                         {new Date(school.created_at).toLocaleDateString()}
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={toggleStatusMutation.isPending}
-                        onClick={() =>
-                          toggleStatusMutation.mutate({
-                            schoolId: school.id,
-                            nextStatus:
-                              school.status === "active" ? "suspended" : "active",
-                          })
-                        }
-                      >
-                        {school.status === "active" ? (
-                          <>
-                            <ShieldAlert className="h-3.5 w-3.5" />
-                            Suspend
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Reactivate
-                          </>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={toggleStatusMutation.isPending}
+                          onClick={() =>
+                            toggleStatusMutation.mutate({
+                              schoolId: school.id,
+                              nextStatus:
+                                school.status === "active" ? "suspended" : "active",
+                            })
+                          }
+                        >
+                          {school.status === "active" ? (
+                            <>
+                              <ShieldAlert className="h-3.5 w-3.5" />
+                              Suspend
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Reactivate
+                            </>
+                          )}
+                        </Button>
+                        {school.status === "suspended" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteTarget(school);
+                              setDeleteConfirmSlug("");
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -442,6 +479,80 @@ export default function PlatformSchoolsPage() {
                     ) : (
                       "Create School"
                     )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Guarded Permanent Delete Modal */}
+          <Dialog
+            open={Boolean(deleteTarget)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setDeleteTarget(null);
+                setDeleteConfirmSlug("");
+              }
+            }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-destructive">
+                  Permanently delete {deleteTarget?.name}?
+                </DialogTitle>
+                <DialogDescription>
+                  This removes the school and all scoped records permanently.
+                  Type{" "}
+                  <strong className="font-mono text-foreground">
+                    {deleteTarget?.slug}
+                  </strong>{" "}
+                  to confirm.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!deleteTarget) return;
+                  deleteSchoolMutation.mutate({
+                    schoolId: deleteTarget.id,
+                    confirmSlug: deleteConfirmSlug,
+                  });
+                }}
+                className="mt-4 space-y-4"
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-del-slug">Confirm school slug</Label>
+                  <Input
+                    id="confirm-del-slug"
+                    placeholder={deleteTarget?.slug}
+                    value={deleteConfirmSlug}
+                    onChange={(e) => setDeleteConfirmSlug(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDeleteTarget(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    disabled={
+                      deleteSchoolMutation.isPending ||
+                      deleteConfirmSlug.trim().toLowerCase() !== deleteTarget?.slug
+                    }
+                  >
+                    {deleteSchoolMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Permanently Delete
                   </Button>
                 </div>
               </form>
