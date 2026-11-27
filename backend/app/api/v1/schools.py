@@ -5,9 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import (
     AuthContext,
+    SchoolAuthContext,
     get_app_settings,
     get_email_provider,
     require_platform_admin,
+    require_school_role,
 )
 from app.core.config import Settings
 from app.db.session import get_db
@@ -122,3 +124,42 @@ def delete_school_endpoint(
         actor_user_id=auth.user.id,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+require_school_admin = require_school_role({"school_admin"})
+
+
+@router.get(
+    "/{school_id}/profile",
+    response_model=SchoolResponse,
+    summary="Get school profile and terminology settings (School Admin)",
+)
+def get_school_profile_endpoint(
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+) -> SchoolResponse:
+    return SchoolResponse.model_validate(school_auth.school)
+
+
+@router.patch(
+    "/{school_id}/profile",
+    response_model=SchoolResponse,
+    summary="Update school name, contact details, and terminology settings (School Admin)",
+)
+def update_school_profile_endpoint(
+    payload: SchoolUpdateRequest,
+    school_auth: SchoolAuthContext = Depends(require_school_admin),
+    db: Session = Depends(get_db),
+) -> SchoolResponse:
+    # School Admins cannot change platform status (only name + terminology/profile config)
+    safe_payload = SchoolUpdateRequest(
+        name=payload.name,
+        status=None,
+        terminology_config=payload.terminology_config,
+    )
+    school = update_school(
+        db,
+        school_id=school_auth.school.id,
+        payload=safe_payload,
+        actor_user_id=school_auth.user.id,
+    )
+    return SchoolResponse.model_validate(school)

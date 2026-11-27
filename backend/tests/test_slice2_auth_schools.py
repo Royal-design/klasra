@@ -332,3 +332,83 @@ def test_login_rate_limiting() -> None:
 
     Base.metadata.drop_all(engine)
     engine.dispose()
+
+
+def test_passwordless_user_creation_and_profile_endpoints(
+    test_env: tuple[TestClient, sessionmaker[Session]],
+) -> None:
+    client, _session_local = test_env
+    platform_csrf = _login(client, "platform@lms.example.com", "PlatformSecret123!")
+
+    # Create two schools to test profile scoping and passwordless user onboarding
+    school_a = _create_school(
+        client,
+        platform_csrf,
+        name="Emerald High",
+        slug="emerald-high",
+        admin_email="admin@emerald.example.com",
+    )
+    school_b = _create_school(
+        client,
+        platform_csrf,
+        name="Cedar Academy",
+        slug="cedar-academy",
+        admin_email="admin@cedar.example.com",
+    )
+    school_a_id = school_a["school"]["id"]
+    school_b_id = school_b["school"]["id"]
+
+    admin_a_csrf = _login(client, "admin@emerald.example.com", "SchoolAdminPass123!")
+
+    # 1. School Admin creates a student WITHOUT a password (triggers 24h setup link)
+    created = client.post(
+        f"/api/v1/schools/{school_a_id}/users",
+        headers={"X-CSRF-Token": admin_a_csrf},
+        json={
+            "email": "newstudent@emerald.example.com",
+            "full_name": "Chinedu Okafor",
+            "role": "student",
+        },
+    )
+    assert created.status_code == 201
+    assert created.json()["email"] == "newstudent@emerald.example.com"
+
+    # 2. Personal Profile update (PATCH /api/v1/auth/me)
+    updated_me = client.patch(
+        "/api/v1/auth/me",
+        headers={"X-CSRF-Token": admin_a_csrf},
+        json={"full_name": "Dr. Ada Mensah"},
+    )
+    assert updated_me.status_code == 200
+    assert updated_me.json()["full_name"] == "Dr. Ada Mensah"
+
+    # 3. School Profile GET & PATCH (status change is ignored/blocked for school_admin)
+    profile = client.get(f"/api/v1/schools/{school_a_id}/profile")
+    assert profile.status_code == 200
+    assert profile.json()["slug"] == "emerald-high"
+
+    patched_profile = client.patch(
+        f"/api/v1/schools/{school_a_id}/profile",
+        headers={"X-CSRF-Token": admin_a_csrf},
+        json={
+            "name": "Emerald Secondary School",
+            "status": "suspended",
+            "terminology_config": {"term_label": "Semester", "year_level_label": "Form"},
+        },
+    )
+    assert patched_profile.status_code == 200
+    body = patched_profile.json()
+    assert body["name"] == "Emerald Secondary School"
+    assert body["status"] == "active"  # School Admin cannot suspend their own school
+    assert body["terminology_config"]["term_label"] == "Semester"
+
+    # Cross-school profile access fails closed (403)
+    assert client.get(f"/api/v1/schools/{school_b_id}/profile").status_code == 403
+    assert (
+        client.patch(
+            f"/api/v1/schools/{school_b_id}/profile",
+            headers={"X-CSRF-Token": admin_a_csrf},
+            json={"name": "Hijacked Name"},
+        ).status_code
+        == 403
+    )

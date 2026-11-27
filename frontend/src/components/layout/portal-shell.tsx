@@ -14,7 +14,9 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Settings,
   Shield,
+  SlidersHorizontal,
   Users,
   X,
 } from "lucide-react";
@@ -73,6 +75,11 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           label: "Guardian Links",
           href: "/school/guardians",
           icon: HeartHandshake,
+        },
+        {
+          label: "School Profile",
+          href: "/school/settings",
+          icon: SlidersHorizontal,
         }
       );
     } else if (role === "teacher") {
@@ -188,7 +195,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="scrollbar-thin flex-1 space-y-1 overflow-y-auto px-3 py-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -227,7 +234,20 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <div className="border-t border-border p-3 space-y-1.5">
+      <div className="shrink-0 space-y-1 border-t border-border bg-card p-3">
+        <Link
+          href="/settings"
+          onClick={() => setMobileOpen(false)}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+            pathname === "/settings"
+              ? "bg-primary/12 text-primary"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Settings className="h-4 w-4" />
+          Profile &amp; Settings
+        </Link>
         <button
           type="button"
           onClick={() => {
@@ -253,8 +273,8 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden w-64 shrink-0 border-r border-border bg-card lg:block">
+      {/* Desktop Sidebar — sticky full viewport height so bottom actions stay fixed */}
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-border bg-card lg:block">
         {sidebarContent}
       </aside>
 

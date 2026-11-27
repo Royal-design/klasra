@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Copy,
+  Download,
   FileSpreadsheet,
   KeyRound,
   Loader2,
@@ -22,11 +23,11 @@ import { PortalShell } from "@/components/layout/portal-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { PasswordInput } from "@/components/ui/password-input";
 import { SelectField } from "@/components/ui/select-field";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
@@ -40,22 +41,30 @@ import type {
   StudentRegistrationRequest,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { extractFieldErrors, strongPasswordSchema } from "@/lib/validation";
+import { extractFieldErrors } from "@/lib/validation";
 
 type TabKey = "directory" | "staff-invites" | "registrations" | "imports";
 
-const createUserSchema = z
-  .object({
-    fullName: z.string().trim().min(2, "Full name is required."),
-    email: z.string().trim().email("Enter a valid email address."),
-    role: z.enum(["teacher", "student", "school_admin"]),
-    password: strongPasswordSchema,
-    confirmPassword: z.string().min(1, "Please confirm the password."),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
+const createUserSchema = z.object({
+  fullName: z.string().trim().min(2, "Full name is required."),
+  email: z.string().trim().email("Enter a valid email address."),
+  role: z.enum(["teacher", "student", "school_admin"]),
+});
+
+function downloadSampleCsv() {
+  const sample = [
+    "email,full_name,role,class_group_name,effective_from",
+    "student1@school.edu,Amara Okafor,student,SS2 Science,2026-09-01",
+    "teacher1@school.edu,Mr. Chidi Eze,teacher,,",
+  ].join("\n");
+  const blob = new Blob([sample], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "klasra-roster-template.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function SchoolUsersPage() {
   const { activeMembership } = useAuth();
@@ -67,13 +76,13 @@ export default function SchoolUsersPage() {
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState("");
+  const [suspendTarget, setSuspendTarget] = React.useState<SchoolUser | null>(null);
+  const [rejectTarget, setRejectTarget] = React.useState<StudentRegistrationRequest | null>(null);
 
-  // Create user form
+  // Create user form (passwordless — emails 24h password setup link)
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [role, setRole] = React.useState<"teacher" | "student" | "school_admin">("teacher");
-  const [password, setPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   // Staff invite form
@@ -123,15 +132,14 @@ export default function SchoolUsersPage() {
           full_name: payload.fullName,
           email: payload.email,
           role: payload.role,
-          password: payload.password,
         }),
       }),
-    onSuccess: () => {
-      toast.success("School user created.");
+    onSuccess: (_data, vars) => {
+      toast.success(
+        `Account created for ${vars.fullName}. Password setup link sent to ${vars.email}.`
+      );
       setFullName("");
       setEmail("");
-      setPassword("");
-      setConfirmPassword("");
       setFieldErrors({});
       queryClient.invalidateQueries({ queryKey: ["school", schoolId, "users"] });
     },
@@ -148,6 +156,7 @@ export default function SchoolUsersPage() {
       }),
     onSuccess: () => {
       toast.success("Membership status updated.");
+      setSuspendTarget(null);
       queryClient.invalidateQueries({ queryKey: ["school", schoolId, "users"] });
     },
     onError: (err) => {
@@ -199,6 +208,9 @@ export default function SchoolUsersPage() {
       }),
     onSuccess: (_res, vars) => {
       toast.success(`Registration ${vars.decision === "approve" ? "approved" : "rejected"}.`);
+      if (vars.decision === "reject") {
+        setRejectTarget(null);
+      }
       queryClient.invalidateQueries({ queryKey: ["school", schoolId, "registrations"] });
       queryClient.invalidateQueries({ queryKey: ["school", schoolId, "users"] });
     },
@@ -315,8 +327,6 @@ export default function SchoolUsersPage() {
                         fullName,
                         email,
                         role,
-                        password,
-                        confirmPassword,
                       });
                       if (!parsed.success) {
                         setFieldErrors(extractFieldErrors(parsed.error));
@@ -366,35 +376,13 @@ export default function SchoolUsersPage() {
                         <option value="school_admin">School Admin</option>
                       </SelectField>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="u-pw">Password (min 12 chars)</Label>
-                      <PasswordInput
-                        id="u-pw"
-                        value={password}
-                        hasError={Boolean(fieldErrors.password)}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                      {fieldErrors.password && (
-                        <p className="text-xs text-destructive">{fieldErrors.password}</p>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="u-confirm">Confirm password</Label>
-                      <PasswordInput
-                        id="u-confirm"
-                        value={confirmPassword}
-                        hasError={Boolean(fieldErrors.confirmPassword)}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                      />
-                      {fieldErrors.confirmPassword && (
-                        <p className="text-xs text-destructive">
-                          {fieldErrors.confirmPassword}
-                        </p>
-                      )}
-                    </div>
+                    <p className="rounded-xl border border-border bg-muted/50 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                      A 24-hour single-use password setup link will be emailed
+                      automatically so the user can choose their own private password.
+                    </p>
                     <Button type="submit" disabled={createUserMutation.isPending}>
                       <Plus className="h-4 w-4" />
-                      Create Account
+                      Create &amp; Email Setup Link
                     </Button>
                   </form>
                 </CardContent>
@@ -461,14 +449,9 @@ export default function SchoolUsersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              updateMembershipMutation.mutate({
-                                membershipId: u.membership_id,
-                                status: "revoked",
-                              })
-                            }
+                            onClick={() => setSuspendTarget(u)}
                           >
-                            Revoke
+                            Suspend
                           </Button>
                         ) : (
                           <Button
@@ -695,12 +678,7 @@ export default function SchoolUsersPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  decideRegistrationMutation.mutate({
-                                    id: req.id,
-                                    decision: "reject",
-                                  })
-                                }
+                                onClick={() => setRejectTarget(req)}
                               >
                                 <XCircle className="h-3.5 w-3.5" />
                                 Reject
@@ -719,11 +697,25 @@ export default function SchoolUsersPage() {
           {/* Tab 4: Bulk CSV / XLSX Import */}
           {tab === "imports" && (
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <FileSpreadsheet className="h-4 w-4 text-primary" />
                   Spreadsheet Bulk Import (CSV / XLSX)
                 </CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={downloadSampleCsv}>
+                    <Download className="h-3.5 w-3.5" />
+                    Download CSV Template
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTab("directory")}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Single User Manually
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs leading-relaxed text-muted-foreground">
@@ -796,6 +788,64 @@ export default function SchoolUsersPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Confirm Suspend User Modal */}
+          <ConfirmDialog
+            open={Boolean(suspendTarget)}
+            onOpenChange={(open) => {
+              if (!open) setSuspendTarget(null);
+            }}
+            variant="destructive"
+            title={`Suspend ${suspendTarget?.full_name}?`}
+            description={
+              <>
+                Suspending{" "}
+                <strong className="text-foreground">
+                  {suspendTarget?.full_name}
+                </strong>{" "}
+                ({suspendTarget?.email}) immediately revokes their access to this
+                school and signs them out of all active sessions.
+              </>
+            }
+            confirmLabel="Suspend User"
+            isPending={updateMembershipMutation.isPending}
+            onConfirm={() => {
+              if (!suspendTarget) return;
+              updateMembershipMutation.mutate({
+                membershipId: suspendTarget.membership_id,
+                status: "revoked",
+              });
+            }}
+          />
+
+          {/* Confirm Reject Student Registration Modal */}
+          <ConfirmDialog
+            open={Boolean(rejectTarget)}
+            onOpenChange={(open) => {
+              if (!open) setRejectTarget(null);
+            }}
+            variant="destructive"
+            title={`Reject ${rejectTarget?.full_name}'s registration?`}
+            description={
+              <>
+                This declines the pending student registration for{" "}
+                <strong className="text-foreground">
+                  {rejectTarget?.full_name}
+                </strong>{" "}
+                ({rejectTarget?.email}) and cannot be undone. They will be
+                notified by email.
+              </>
+            }
+            confirmLabel="Reject Registration"
+            isPending={decideRegistrationMutation.isPending}
+            onConfirm={() => {
+              if (!rejectTarget) return;
+              decideRegistrationMutation.mutate({
+                id: rejectTarget.id,
+                decision: "reject",
+              });
+            }}
+          />
         </div>
       )}
     </PortalShell>

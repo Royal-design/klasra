@@ -1,15 +1,23 @@
+import html
+import logging
 import uuid
+from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.core.security import hash_password
+from app.core.security import generate_token, hash_password, hash_token
 from app.models.membership import SchoolMembership
+from app.models.password_reset import PasswordResetToken
 from app.models.user import User
-from app.repositories import membership_repo, user_repo
+from app.repositories import membership_repo, school_repo, user_repo
 from app.schemas.membership import MembershipUpdateRequest, SchoolUserCreateRequest
 from app.services.audit import record_audit_event
 from app.services.auth import revoke_all_user_sessions
+from app.services.email import EmailMessage, EmailProvider
+
+logger = logging.getLogger(__name__)
 
 
 def _assert_teacher_single_school(
@@ -36,17 +44,20 @@ def create_school_user(
     school_id: uuid.UUID,
     payload: SchoolUserCreateRequest,
     actor_user_id: uuid.UUID,
+    email_provider: EmailProvider | None = None,
+    frontend_base_url: str = "http://localhost:3000",
 ) -> tuple[User, SchoolMembership]:
     """Create a user account (or attach existing) with a role inside one school."""
     user = user_repo.get_user_by_email(db, email=str(payload.email))
     created_new_user = False
 
     if user is None:
+        raw_pw = payload.password or generate_token(32)
         user = user_repo.create_user(
             db,
             email=str(payload.email),
             full_name=payload.full_name,
-            password_hash=hash_password(payload.password),
+            password_hash=hash_password(raw_pw),
             is_platform_admin=False,
             is_active=True,
         )
@@ -75,6 +86,17 @@ def create_school_user(
     )
     db.flush()
 
+    raw_setup_token: str | None = None
+    if created_new_user:
+        raw_setup_token = generate_token(32)
+        db.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=hash_token(raw_setup_token),
+                expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            )
+        )
+
     record_audit_event(
         db,
         action="membership.created",
@@ -93,6 +115,33 @@ def create_school_user(
     db.commit()
     db.refresh(user)
     db.refresh(membership)
+
+    if email_provider is not None and created_new_user and raw_setup_token is not None:
+        school = school_repo.get_school_by_id(db, school_id=school_id)
+        school_name = school.name if school else "your school"
+        base = frontend_base_url.rstrip("/")
+        set_pw_url = f"{base}/reset-password?{urlencode({'token': raw_setup_token})}"
+        role_display = membership.role.replace("_", " ").title()
+        msg = EmailMessage(
+            to=user.email,
+            subject=f"Welcome to {school_name} on Klasra — Set your password",
+            text=(
+                f"Hello {user.full_name},\n\n"
+                f"An account has been created for you at {school_name} as {role_display}.\n\n"
+                f"Set your private password using this 24-hour single-use link:\n{set_pw_url}\n"
+            ),
+            html=(
+                f"<p>Hello {html.escape(user.full_name)},</p>"
+                f"<p>An account has been created for you at <strong>{html.escape(school_name)}</strong> "
+                f"as <strong>{html.escape(role_display)}</strong>.</p>"
+                f'<p><a href="{html.escape(set_pw_url)}">Set your private password (24h link)</a></p>'
+            ),
+        )
+        try:
+            email_provider.send_email(msg)
+        except Exception:
+            logger.exception("Failed to send welcome email to user %s", user.id)
+
     return user, membership
 
 

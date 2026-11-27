@@ -17,6 +17,7 @@ from app.schemas.auth import (
     LoginResponse,
     MembershipSummary,
     MessageResponse,
+    ProfileUpdateRequest,
     ResetPasswordRequest,
     UserProfile,
 )
@@ -127,6 +128,22 @@ def get_me(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> UserProfile:
+    return _build_user_profile(db, auth.user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserProfile,
+    summary="Update the authenticated user's personal profile",
+)
+def update_me(
+    payload: ProfileUpdateRequest,
+    auth: AuthContext = Depends(verify_csrf),
+    db: Session = Depends(get_db),
+) -> UserProfile:
+    auth.user.full_name = payload.full_name
+    db.commit()
+    db.refresh(auth.user)
     return _build_user_profile(db, auth.user)
 
 

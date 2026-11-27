@@ -15,6 +15,7 @@ import { PortalShell } from "@/components/layout/portal-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ export default function SchoolGuardiansPage() {
   const [page, setPage] = React.useState(1);
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
+  const [revokeTarget, setRevokeTarget] = React.useState<GuardianLink | null>(null);
 
   // Invite form state
   const [studentId, setStudentId] = React.useState("");
@@ -108,6 +110,9 @@ export default function SchoolGuardiansPage() {
           ? "Guardian link approved."
           : "Guardian link revoked."
       );
+      if (vars.action === "revoke") {
+        setRevokeTarget(null);
+      }
       queryClient.invalidateQueries({ queryKey: ["school", schoolId, "guardian-links"] });
     },
     onError: (err) => {
@@ -325,9 +330,7 @@ export default function SchoolGuardiansPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              decideMutation.mutate({ id: link.id, action: "revoke" })
-                            }
+                            onClick={() => setRevokeTarget(link)}
                           >
                             <XCircle className="h-3.5 w-3.5" />
                             Revoke
@@ -341,6 +344,35 @@ export default function SchoolGuardiansPage() {
               </CardContent>
             </Card>
           </div>
+
+          <ConfirmDialog
+            open={Boolean(revokeTarget)}
+            onOpenChange={(open) => {
+              if (!open) setRevokeTarget(null);
+            }}
+            variant="destructive"
+            title={`Revoke ${revokeTarget?.guardian_full_name}'s access?`}
+            description={
+              <>
+                This immediately removes{" "}
+                <strong className="text-foreground">
+                  {revokeTarget?.guardian_full_name}
+                </strong>{" "}
+                from viewing{" "}
+                <strong className="text-foreground">
+                  {revokeTarget?.student_full_name || "this student"}
+                </strong>
+                &apos;s grades, attendance, and teacher feedback. A new invitation
+                will be required to restore access.
+              </>
+            }
+            confirmLabel="Revoke Access"
+            isPending={decideMutation.isPending}
+            onConfirm={() => {
+              if (!revokeTarget) return;
+              decideMutation.mutate({ id: revokeTarget.id, action: "revoke" });
+            }}
+          />
         </div>
       )}
     </PortalShell>

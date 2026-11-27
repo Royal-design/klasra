@@ -3,8 +3,15 @@ import uuid
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import SchoolAuthContext, require_school_role
+from app.api.deps import (
+    SchoolAuthContext,
+    get_app_settings,
+    get_email_provider,
+    require_school_role,
+)
+from app.core.config import Settings
 from app.db.session import get_db
+from app.services.email import EmailProvider
 from app.schemas.membership import (
     MembershipUpdateRequest,
     SchoolUserCreateRequest,
@@ -52,12 +59,16 @@ def create_school_user_endpoint(
     payload: SchoolUserCreateRequest,
     school_auth: SchoolAuthContext = Depends(require_school_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
+    email_provider: EmailProvider = Depends(get_email_provider),
 ) -> SchoolUserResponse:
     user, membership = create_school_user(
         db,
         school_id=school_auth.school.id,
         payload=payload,
         actor_user_id=school_auth.user.id,
+        email_provider=email_provider,
+        frontend_base_url=settings.frontend_base_url,
     )
     return _to_school_user_response(user, membership)
 

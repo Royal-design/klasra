@@ -88,25 +88,29 @@ This document specifies the HTTP API exposed by `backend/` for the planned Next.
 | `POST` | `/api/v1/auth/login` | Public (strict rate limit) | No | Verify email & Argon2id password, set `HttpOnly` session cookie + CSRF cookie, return `user` + `csrf_token`. |
 | `POST` | `/api/v1/auth/logout` | Authenticated | Yes | Invalidate all active sessions for the current user and clear cookies (`204 No Content`). |
 | `GET` | `/api/v1/auth/me` | Authenticated | No | Return current user profile and school memberships. |
+| `PATCH` | `/api/v1/auth/me` | Authenticated | Yes | Update the current user's `full_name` (audited). |
 | `POST` | `/api/v1/auth/forgot-password` | Public (strict rate limit) | No | Always returns generic `200 OK` (no email enumeration). Creates a 30-minute single-use hashed token and emails a reset link via Resend (`EMAIL_PROVIDER=resend`). |
 | `POST` | `/api/v1/auth/reset-password` | Public (strict rate limit) | No | Consumes single-use reset token (`410 Gone` if invalid/expired/used), updates Argon2id password, and revokes all active sessions (audited). |
 | `POST` | `/api/v1/auth/change-password` | Authenticated | Yes | Verifies current password, updates Argon2id password, revokes all active sessions, and clears cookies (audited). |
 
 > **Swagger UI (`/docs`) testing:** Run `POST /api/v1/auth/login` first (your browser automatically stores the session cookie when `COOKIE_SECURE=false` locally), then click **Authorize** and paste the `csrf_token` into `CSRFToken` (`X-CSRF-Token`).
 
-### Schools — Platform Admin (Slice 2 — `SCH-01`, `AUTH-06`)
+### Schools — Platform Admin & School Profile (Slice 2 — `SCH-01`, `AUTH-06`)
 
 | Method | Path | Access | CSRF Required | Description |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/v1/schools` | Platform Admin | Yes | Create a school and its initial active `school_admin` account (audited). Returns `201 Created`. |
+| `POST` | `/api/v1/schools` | Platform Admin | Yes | Create a school and its initial active `school_admin` account (optional password; if omitted, sends a 24h single-use password-setup email) (audited). Returns `201 Created`. |
 | `GET` | `/api/v1/schools` | Platform Admin | No | List all schools. |
-| `PATCH` | `/api/v1/schools/{school_id}` | Platform Admin | Yes | Update school `name` or `status` (`active` / `suspended`) (audited). |
+| `PATCH` | `/api/v1/schools/{school_id}` | Platform Admin | Yes | Update school `name`, `status` (`active` / `suspended`), or `terminology_config` (audited). |
+| `DELETE` | `/api/v1/schools/{school_id}?confirm_slug=...` | Platform Admin | Yes | Permanently delete a **suspended** school and cascade its data after slug confirmation (`409` if still active or slug mismatch) (audited). |
+| `GET` | `/api/v1/schools/{school_id}/profile` | School Admin of `{school_id}` | No | Fetch the school's name, slug, status, and custom terminology settings. |
+| `PATCH` | `/api/v1/schools/{school_id}/profile` | School Admin of `{school_id}` | Yes | Update the school's `name` and `terminology_config` (blocks changing platform `status`; audited). |
 
 ### School Users & Memberships — School Admin (Slice 2 — `AUTH-01`, `AUTH-03`, `AUTH-05`, `AUTH-06`)
 
 | Method | Path | Access | CSRF Required | Description |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/v1/schools/{school_id}/users` | School Admin of `{school_id}` | Yes | Create a user (or attach existing user) with role `school_admin`, `teacher`, or `student` in `{school_id}`. Enforces `AUTH-03` single active school for teachers (`409 TEACHER_SINGLE_SCHOOL_VIOLATION`). Audited. |
+| `POST` | `/api/v1/schools/{school_id}/users` | School Admin of `{school_id}` | Yes | Create a user (or attach existing user) with role `school_admin`, `teacher`, or `student` in `{school_id}`. `password` is optional — when omitted for a new user, a 24h single-use password-setup link is emailed via Resend. Enforces `AUTH-03` single active school for teachers (`409 TEACHER_SINGLE_SCHOOL_VIOLATION`). Audited. |
 | `GET` | `/api/v1/schools/{school_id}/users` | School Admin of `{school_id}` | No | List users and memberships strictly scoped to `{school_id}`. |
 | `PATCH` | `/api/v1/schools/{school_id}/memberships/{membership_id}` | School Admin of `{school_id}` | Yes | Update role or status (`pending` / `active` / `revoked`). Prevents removing/demoting the last active `school_admin` (`409 LAST_SCHOOL_ADMIN`), enforces `AUTH-03`, invalidates user sessions on revocation, and records an audit event. |
 

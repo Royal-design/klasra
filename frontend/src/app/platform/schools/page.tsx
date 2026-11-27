@@ -17,6 +17,7 @@ import { PortalShell } from "@/components/layout/portal-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,10 @@ export default function PlatformSchoolsPage() {
   const [q, setQ] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [statusTarget, setStatusTarget] = React.useState<{
+    school: School;
+    nextStatus: "active" | "suspended";
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<School | null>(null);
   const [deleteConfirmSlug, setDeleteConfirmSlug] = React.useState("");
 
@@ -124,6 +129,7 @@ export default function PlatformSchoolsPage() {
       toast.success(
         `${updated.name} is now ${updated.status}.`
       );
+      setStatusTarget(null);
       queryClient.invalidateQueries({ queryKey: ["platform", "schools"] });
     },
     onError: (err) => {
@@ -283,8 +289,8 @@ export default function PlatformSchoolsPage() {
                           size="sm"
                           disabled={toggleStatusMutation.isPending}
                           onClick={() =>
-                            toggleStatusMutation.mutate({
-                              schoolId: school.id,
+                            setStatusTarget({
+                              school,
                               nextStatus:
                                 school.status === "active" ? "suspended" : "active",
                             })
@@ -444,6 +450,40 @@ export default function PlatformSchoolsPage() {
               </form>
             </DialogContent>
           </Dialog>
+
+          {/* Confirm Suspend / Reactivate School Modal */}
+          <ConfirmDialog
+            open={Boolean(statusTarget)}
+            onOpenChange={(open) => {
+              if (!open) setStatusTarget(null);
+            }}
+            variant={
+              statusTarget?.nextStatus === "suspended" ? "destructive" : "default"
+            }
+            title={
+              statusTarget?.nextStatus === "suspended"
+                ? `Suspend ${statusTarget.school.name}?`
+                : `Reactivate ${statusTarget?.school.name}?`
+            }
+            description={
+              statusTarget?.nextStatus === "suspended"
+                ? "Suspending this school immediately blocks access for its administrators, teachers, students, and linked parents until it is reactivated."
+                : "Reactivating this school restores access for its active members and linked parents."
+            }
+            confirmLabel={
+              statusTarget?.nextStatus === "suspended"
+                ? "Suspend School"
+                : "Reactivate School"
+            }
+            isPending={toggleStatusMutation.isPending}
+            onConfirm={() => {
+              if (!statusTarget) return;
+              toggleStatusMutation.mutate({
+                schoolId: statusTarget.school.id,
+                nextStatus: statusTarget.nextStatus,
+              });
+            }}
+          />
 
           {/* Guarded Permanent Delete Modal */}
           <Dialog
