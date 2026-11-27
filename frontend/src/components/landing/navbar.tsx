@@ -2,10 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
+import { toast } from "sonner";
 import { KlasraLogo } from "@/components/brand/klasra-logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/lib/auth-context";
 
 const navLinks = [
   { label: "Why Klasra", href: "#why-klasra" },
@@ -15,7 +18,16 @@ const navLinks = [
 ];
 
 export function LandingNavbar() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  async function handleLogout() {
+    await logout();
+    setMobileOpen(false);
+    toast.success("Signed out cleanly.");
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
@@ -42,12 +54,29 @@ export function LandingNavbar() {
 
         <div className="hidden items-center gap-2.5 md:flex">
           <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/register/student">Student Code</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/login">Sign In</Link>
-          </Button>
+          {user ? (
+            <>
+              <Button size="sm" asChild>
+                <Link href="/dashboard">
+                  <LayoutDashboard className="h-3.5 w-3.5" />
+                  Dashboard
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
+                <LogOut className="h-3.5 w-3.5" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/register/student">Student Code</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link href="/login">Sign In</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 md:hidden">
@@ -79,12 +108,33 @@ export function LandingNavbar() {
               </a>
             ))}
             <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/register/student">Register with School Code</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link href="/login">Sign In to Your School</Link>
-              </Button>
+              {user ? (
+                <>
+                  <Button asChild className="w-full">
+                    <Link href="/dashboard" onClick={() => setMobileOpen(false)}>
+                      <LayoutDashboard className="h-4 w-4" />
+                      Go to Dashboard
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href="/register/student">Register with School Code</Link>
+                  </Button>
+                  <Button asChild className="w-full">
+                    <Link href="/login">Sign In to Your School</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
