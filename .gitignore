@@ -11,6 +11,12 @@ venv/
 dist/
 build/
 
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+
 # Environment variables
 .env
 .env.*
