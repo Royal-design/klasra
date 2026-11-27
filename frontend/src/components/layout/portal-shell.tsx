@@ -209,7 +209,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[10px] font-semibold",
                     isActive
-                      ? "bg-white/20 text-white"
+                      ? "bg-primary-foreground/15 text-primary-foreground"
                       : "bg-primary/10 text-primary"
                   )}
                 >
