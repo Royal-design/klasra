@@ -1,13 +1,11 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
   Building2,
   CheckCircle2,
   Clock,
   GraduationCap,
   Shield,
-  Sparkles,
 } from "lucide-react";
 import { PortalShell } from "@/components/layout/portal-shell";
 import { Badge } from "@/components/ui/badge";
@@ -29,32 +27,29 @@ export default function DashboardPage() {
 
   return (
     <PortalShell>
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="space-y-6"
-      >
-        {/* Welcome Banner */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-teal-600 p-6 text-white shadow-xl shadow-indigo-500/15 sm:p-8">
-          <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-6">
+        {/* Clean, Restrained Header Card */}
+        <div className="rounded-2xl border border-border bg-card p-6 sm:p-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
-                <Sparkles className="h-3.5 w-3.5" />
-                Signed In &amp; Verified
-              </span>
-              <h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                Workspace Overview
+              </p>
+              <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground">
                 Welcome back, {user?.full_name}
               </h1>
-              <p className="mt-1 text-sm text-indigo-100">
+              <p className="mt-1 text-sm text-muted-foreground">
                 {user?.is_platform_admin
-                  ? "You have Platform Administrator access for onboarding and managing schools."
+                  ? "Platform Administrator — manage schools and platform operations."
                   : activeMembership
-                  ? `Active in ${activeMembership.school_name || "your school"} as ${activeMembership.role.replace("_", " ")}.`
+                  ? `${activeMembership.school_name || "Your school"} · ${activeMembership.role.replace("_", " ")}`
                   : "Your account is active. Review your school memberships below."}
               </p>
             </div>
+            <Badge variant="success" className="w-fit">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Session Verified
+            </Badge>
           </div>
         </div>
 
@@ -83,15 +78,15 @@ export default function DashboardPage() {
                 Account Overview
               </CardTitle>
               <CardDescription>
-                Authenticated via secure HttpOnly session + CSRF protection.
+                Authenticated via HttpOnly session cookie and CSRF protection.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center justify-between border-b border-border pb-2.5">
                 <span className="text-muted-foreground">Email</span>
                 <span className="font-medium text-foreground">{user?.email}</span>
               </div>
-              <div className="flex items-center justify-between border-b border-border pb-2">
+              <div className="flex items-center justify-between border-b border-border pb-2.5">
                 <span className="text-muted-foreground">Platform Admin</span>
                 <Badge variant={user?.is_platform_admin ? "default" : "outline"}>
                   {user?.is_platform_admin ? "Yes" : "No"}
@@ -99,10 +94,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Account Status</span>
-                <Badge variant="success">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Active
-                </Badge>
+                <Badge variant="success">Active</Badge>
               </div>
             </CardContent>
           </Card>
@@ -110,7 +102,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Building2 className="h-4 w-4 text-secondary" />
+                <Building2 className="h-4 w-4 text-primary" />
                 School Memberships
               </CardTitle>
               <CardDescription>
@@ -123,7 +115,7 @@ export default function DashboardPage() {
                   {user.memberships.map((m) => (
                     <div
                       key={m.id}
-                      className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-3.5 py-2.5"
+                      className="flex items-center justify-between rounded-xl border border-border bg-muted/50 px-3.5 py-2.5"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-foreground">
@@ -149,7 +141,7 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4 text-xs text-muted-foreground">
-                  <GraduationCap className="h-5 w-5 shrink-0 text-primary" />
+                  <GraduationCap className="h-5 w-5 shrink-0 text-muted-foreground" />
                   <span>
                     {user?.is_platform_admin
                       ? "Platform Admins manage schools without belonging to school learning records."
@@ -160,7 +152,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-      </motion.div>
+      </div>
     </PortalShell>
   );
 }

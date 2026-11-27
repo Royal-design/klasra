@@ -1,15 +1,19 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft, GraduationCap, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AuthShellProps {
   title: string;
   subtitle: string;
   badge?: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  asideHeading?: string;
+  asideDescription?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -18,67 +22,104 @@ export function AuthShell({
   title,
   subtitle,
   badge,
+  imageSrc = "/images/hero-classroom.jpg",
+  imageAlt = "Secondary school classroom using Klasra",
+  asideHeading = "One calm, structured workspace for every secondary school.",
+  asideDescription = "Lessons, video learning, timed quizzes and exams, attendance, and verified multi-school parent access — strictly isolated per school.",
   children,
   footer,
 }: AuthShellProps) {
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
-      {/* Subtle neutral radial highlight — Linear/Raycast restraint */}
-      <div className="pointer-events-none absolute inset-0 bg-scholarly-grid opacity-30 dark:opacity-20" />
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[340px] w-[540px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl dark:bg-primary/12" />
+    <div className="grid min-h-screen bg-background lg:grid-cols-12">
+      {/* Left Editorial Visual Column (Desktop lg+) */}
+      <aside className="relative hidden overflow-hidden border-r border-border bg-[#0C0C0E] lg:col-span-6 lg:flex lg:flex-col lg:justify-between">
+        <Image
+          src={imageSrc}
+          alt={imageAlt}
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover opacity-55"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0A0A0B] via-[#0A0A0B]/55 to-[#0A0A0B]/35" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/" className="group flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <GraduationCap className="h-5 w-5" />
-          </div>
-          <span className="font-display text-base font-bold tracking-tight text-foreground">
-            ScholarGrid
-          </span>
-        </Link>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Home
-          </Link>
-          <ThemeToggle />
-        </div>
-      </header>
-
-      <main className="relative z-10 flex flex-1 items-center justify-center px-4 py-8 sm:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-md"
-        >
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-xl shadow-black/[0.04] dark:border-white/[0.08] dark:bg-[#141416] dark:shadow-[0_24px_64px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.05)] sm:p-8">
-            {badge && (
-              <span className="mb-3 inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-[11px] font-semibold tracking-wide text-muted-foreground dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-300">
-                {badge}
-              </span>
-            )}
-            <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-              {title}
-            </h1>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {subtitle}
-            </p>
-
-            <div className="mt-6">{children}</div>
-          </div>
-
-          {footer && (
-            <div className="mt-5 text-center text-sm text-muted-foreground">
-              {footer}
+        {/* Top Brand Mark */}
+        <div className="relative z-10 flex items-center justify-between p-8">
+          <Link href="/" className="flex items-center gap-2.5 text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <GraduationCap className="h-4 w-4" />
             </div>
-          )}
-        </motion.div>
-      </main>
+            <span className="font-display text-base font-bold tracking-tight">
+              Klasra
+            </span>
+          </Link>
+        </div>
+
+        {/* Bottom Editorial Copy */}
+        <div className="relative z-10 max-w-lg p-8 pb-10">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs font-medium text-zinc-200 backdrop-blur-sm">
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span>School-Scoped &amp; Audited</span>
+          </div>
+          <h2 className="font-display text-2xl font-bold leading-snug tracking-tight text-white">
+            {asideHeading}
+          </h2>
+          <p className="mt-2.5 text-sm leading-relaxed text-zinc-300">
+            {asideDescription}
+          </p>
+        </div>
+      </aside>
+
+      {/* Right Form Column */}
+      <div className="flex flex-col lg:col-span-6">
+        <header className="flex items-center justify-between px-4 py-5 sm:px-8">
+          <Link href="/" className="flex items-center gap-2.5 lg:invisible">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <GraduationCap className="h-4 w-4" />
+            </div>
+            <span className="font-display text-base font-bold tracking-tight text-foreground">
+              Klasra
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Home
+            </Link>
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-8 lg:px-12">
+          <div className="w-full max-w-md">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#141416] sm:p-8">
+              {badge && (
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
+                  {badge}
+                </p>
+              )}
+              <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+                {title}
+              </h1>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {subtitle}
+              </p>
+
+              <div className="mt-6">{children}</div>
+            </div>
+
+            {footer && (
+              <div className="mt-5 text-center text-sm text-muted-foreground">
+                {footer}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

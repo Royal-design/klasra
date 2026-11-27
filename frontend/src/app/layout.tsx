@@ -3,9 +3,9 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ScholarGrid LMS — Modern Multi-School Learning & Parent Portal",
+  title: "Klasra — Multi-School Secondary Learning & Parent Portal",
   description:
-    "A secure, multi-school secondary learning management system for lessons, video learning, assignments, grading, attendance, and verified parent visibility.",
+    "A secure, multi-school secondary learning management system for lessons, video learning, assignments, quizzes, exams, grading, attendance, and verified parent visibility.",
 };
 
 export default function RootLayout({

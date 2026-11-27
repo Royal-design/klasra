@@ -59,7 +59,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       badge="Secure Portal Access"
-      title="Sign in to ScholarGrid"
+      title="Sign in to Klasra"
       subtitle="Use your school email and password to access your portal."
       footer={
         <div className="space-y-2">

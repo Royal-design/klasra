@@ -147,12 +147,12 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-teal-500 text-white shadow-sm">
-          <GraduationCap className="h-5 w-5" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <GraduationCap className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-sm font-extrabold text-foreground">
-            ScholarGrid
+          <p className="truncate font-display text-sm font-bold text-foreground">
+            Klasra
           </p>
           <p className="truncate text-[11px] font-medium text-muted-foreground">
             {activeMembership?.school_name || (user.is_platform_admin ? "Platform Ops" : "LMS Portal")}

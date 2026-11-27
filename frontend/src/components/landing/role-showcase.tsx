@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
   CheckCircle2,
@@ -10,7 +9,7 @@ import {
   HeartHandshake,
   Presentation,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type RoleKey = "admin" | "teacher" | "student" | "parent";
 
@@ -22,69 +21,59 @@ const ROLES: Record<
     headline: string;
     summary: string;
     bullets: string[];
-    highlightStat: string;
-    highlightLabel: string;
   }
 > = {
   admin: {
     label: "School Admin",
     icon: Building2,
-    headline: "Run your entire school structure from one clean hub.",
+    headline: "Configure academic structure and govern access with clarity.",
     summary:
-      "Configure academic years, terms, class groups, and custom terminology. Onboard teachers via email invites, approve student registrations, and manage parent links.",
+      "Manage academic years, terms, year levels, class groups, and subject offerings. Onboard staff via email invitations and review student or parent requests before granting access.",
     bullets: [
-      "Bulk import students & staff via CSV/XLSX with dry-run error previews",
-      "Approve or reject student self-registrations before granting access",
-      "Transfer or withdraw students while preserving full historical records",
-      "Full audit trail on every role, enrollment, and guardian decision",
+      "CSV and XLSX roster import with dry-run error validation before commit",
+      "Pending student self-registration queue with one-click approve or reject",
+      "History-preserving student transfers and withdrawals across terms",
+      "Audit trail for every role change, enrollment, and guardian approval",
     ],
-    highlightStat: "100%",
-    highlightLabel: "School-scoped isolation",
   },
   teacher: {
     label: "Teacher",
     icon: Presentation,
-    headline: "Focus on teaching — not fighting clunky spreadsheets.",
+    headline: "A focused workspace scoped strictly to your assigned classes.",
     summary:
-      "See only your assigned subject offerings. Publish lessons with video and files, review versioned submissions in a split-screen drawer, and take roll call in seconds.",
+      "Publish lessons with videos and materials, build assignments, quizzes, and timed exams, grade submissions privately in draft mode, and record daily attendance.",
     bullets: [
-      "Upload lesson videos (up to 50 MB) or embed YouTube, Vimeo & Loom",
-      "Per-assignment late submission & resubmission controls",
-      "Draft grades privately and publish to students & parents when ready",
-      "Fast batch attendance roll call with automatic staff attribution",
+      "Upload lesson videos up to 50 MB or embed YouTube, Vimeo, and Loom",
+      "Combine auto-graded objective questions with manually graded essays",
+      "Control late submissions, resubmissions, and score release timing",
+      "Record batch attendance with automatic staff attribution and timestamps",
     ],
-    highlightStat: "1 School",
-    highlightLabel: "Focused teacher workspace",
   },
   student: {
     label: "Student",
     icon: GraduationCap,
-    headline: "A calm, mobile-friendly classroom that keeps you on track.",
+    headline: "Clear coursework, timed assessments, and private progress.",
     summary:
-      "Access published lessons and videos, submit assignments with clear version history, and review your own published grades, teacher feedback, and attendance.",
+      "Review published lessons, submit assignments with version history, take timed quizzes and exams, and track your published grades and attendance.",
     bullets: [
-      "Watch lesson videos and download materials securely on any device",
-      "Submit typed responses and files with instant confirmation",
-      "Track every resubmission version and read teacher feedback clearly",
-      "Private by design — students never see classmates' submissions or marks",
+      "Responsive 360px+ layout designed for phones, tablets, and laptops",
+      "Track submission versions and read teacher feedback in one place",
+      "Take timed quizzes and exams with automatic server deadline checks",
+      "Strict privacy — students only ever see their own submissions and marks",
     ],
-    highlightStat: "360px+",
-    highlightLabel: "Mobile-first student UX",
   },
   parent: {
     label: "Parent / Guardian",
     icon: HeartHandshake,
-    headline: "Follow every child's progress — even across different schools.",
+    headline: "Verified visibility across every child and every school.",
     summary:
-      "One parent account links to all your approved children across participating schools. Check published grades, teacher feedback, and daily attendance anytime.",
+      "Use a single parent account to follow approved children across different schools, viewing published grades, quiz and exam scores, teacher feedback, and attendance.",
     bullets: [
-      "Single login across multiple schools with one-click child switcher",
-      "Verified email + school admin approval protects every child's privacy",
-      "View published grades, teacher comments, and full attendance history",
-      "Instant access revocation handled cleanly by school administrators",
+      "One parent login across multiple participating secondary schools",
+      "Email verification plus School Admin approval before any record is visible",
+      "Published grades, assessment results, teacher comments, and attendance",
+      "Immediate access revocation managed by school administrators",
     ],
-    highlightStat: "Multi-School",
-    highlightLabel: "One unified parent login",
   },
 };
 
@@ -95,109 +84,89 @@ export function RoleShowcase() {
   return (
     <section
       id="roles"
-      className="border-y border-border/60 bg-muted/40 py-20 dark:bg-muted/20"
+      className="border-y border-border bg-card/50 py-20 dark:bg-[#0E0E10]"
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <Badge variant="default" className="mb-3">
-            Tailored Portals
-          </Badge>
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Designed around every role in a secondary school.
-          </h2>
-          <p className="mt-3 text-base text-muted-foreground">
-            Switch tabs to see how ScholarGrid adapts to administrators, teachers,
-            students, and families.
-          </p>
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Role-Based Portals
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
+              Purpose-built for every person in the school community.
+            </h2>
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="LMS user roles"
+            className="inline-flex flex-wrap gap-1 rounded-xl border border-border bg-background p-1"
+          >
+            {(Object.keys(ROLES) as RoleKey[]).map((key) => {
+              const role = ROLES[key];
+              const Icon = role.icon;
+              const isActive = activeRole === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveRole(key)}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{role.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Animated Role Tabs */}
-        <div className="mt-10 flex flex-wrap justify-center gap-2">
-          {(Object.keys(ROLES) as RoleKey[]).map((key) => {
-            const role = ROLES[key];
-            const Icon = role.icon;
-            const isActive = activeRole === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setActiveRole(key)}
-                className={`relative flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
-                  isActive
-                    ? "text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {isActive && (
-                  <motion.span
-                    layoutId="active-role-pill"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="absolute inset-0 rounded-full bg-primary shadow-md shadow-primary/25"
-                  />
-                )}
-                <Icon className="relative z-10 h-4 w-4" />
-                <span className="relative z-10">{role.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Content */}
-        <div className="mt-10 grid items-center gap-8 rounded-3xl border border-border bg-card p-6 shadow-xl shadow-slate-900/5 dark:shadow-black/30 sm:p-10 lg:grid-cols-12">
+        <div className="mt-10 grid items-center gap-8 rounded-2xl border border-border bg-card p-6 sm:p-8 lg:grid-cols-12">
           <div className="lg:col-span-7">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeRole}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.25 }}
-              >
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-secondary/25 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
-                  <span>{current.highlightStat}</span>
-                  <span className="opacity-60">·</span>
-                  <span>{current.highlightLabel}</span>
-                </div>
-                <h3 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
-                  {current.headline}
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                  {current.summary}
-                </p>
-                <ul className="mt-6 space-y-3">
-                  {current.bullets.map((bullet) => (
-                    <li
-                      key={bullet}
-                      className="flex items-start gap-3 text-sm text-foreground"
-                    >
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
-                      <span>{bullet}</span>
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-            </AnimatePresence>
+            <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">
+              {current.headline}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              {current.summary}
+            </p>
+            <ul className="mt-6 space-y-3">
+              {current.bullets.map((bullet) => (
+                <li
+                  key={bullet}
+                  className="flex items-start gap-3 text-sm text-foreground"
+                >
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="lg:col-span-5">
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/50">
+            <div className="overflow-hidden rounded-xl border border-border bg-muted">
               <div className="relative aspect-[4/3] w-full">
                 <Image
                   src="/images/parent-student.jpg"
-                  alt="Parent and teenager reviewing school progress together on a laptop"
+                  alt="Parent and secondary school student reviewing academic progress together"
                   fill
                   sizes="(max-width: 1024px) 100vw, 40vw"
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 rounded-xl border border-white/15 bg-slate-950/70 px-3.5 py-2.5 text-white backdrop-blur-md">
-                  <p className="text-xs font-semibold">
-                    Verified Family &amp; Classroom Visibility
-                  </p>
-                  <p className="text-[11px] text-slate-300">
-                    Real-time published grades, feedback &amp; attendance history.
-                  </p>
-                </div>
+              </div>
+              <div className="border-t border-border bg-card px-4 py-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Transparent Family &amp; Classroom Progress
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Published grades, quiz &amp; exam results, and daily attendance.
+                </p>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-# FRONTEND_DESIGN_PLAN.md — School LMS Frontend Architecture & UI/UX Blueprint
+# FRONTEND_DESIGN_PLAN.md — Klasra LMS Frontend Architecture & UI/UX Blueprint
 
 **Target Stack:** Next.js 15 (App Router, TypeScript), Tailwind CSS v4, **shadcn/ui** (Radix UI primitives + `sonner`), **Zustand** (non-sensitive UI/workspace state), Framer Motion, Lucide Icons, TanStack Query, **Zod** (strict validation + Confirm Password on all password forms), `next-themes`  
 **Dark Mode Direction:** Inspired by **Linear & Raycast** — true neutral dark charcoal surfaces (`#0A0A0B` canvas, `#141416` elevated cards, `#1B1B1F` borderless recessed inputs), hairline `rgba(255,255,255,0.08)` borders, crisp zinc typography (`#F4F4F5` / `#A1A1AA`), and restrained Indigo/Emerald accents.  

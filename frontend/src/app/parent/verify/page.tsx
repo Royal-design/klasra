@@ -153,6 +153,10 @@ export default function ParentVerifyPage() {
       badge="Parent / Guardian Verification"
       title="Verify your parent invitation"
       subtitle="Confirm your email and link your parent account securely."
+      imageSrc="/images/parent-student.jpg"
+      imageAlt="Parent and teenager reviewing school progress together"
+      asideHeading="Follow every child's progress across multiple schools."
+      asideDescription="One verified parent login connects you to published grades, quiz and exam scores, teacher feedback, and attendance for your approved children."
       footer={
         <Link href="/login" className="font-semibold text-primary hover:underline">
           Back to Sign In
