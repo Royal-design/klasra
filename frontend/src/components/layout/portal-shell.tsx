@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { KlasraMark } from "@/components/brand/klasra-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SelectField } from "@/components/ui/select-field";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ChangePasswordDialog } from "@/components/layout/change-password-dialog";
 import { useAuth } from "@/lib/auth-context";
@@ -166,18 +167,18 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           >
             Active School
           </label>
-          <select
+          <SelectField
             id="school-switcher"
             value={activeMembership?.id || ""}
             onChange={(e) => setActiveMembershipId(e.target.value)}
-            className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label="Active school"
           >
             {activeMemberships.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.school_name || m.school_id} ({m.role})
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
       )}
 
