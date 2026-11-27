@@ -13,7 +13,7 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 class InitialSchoolAdminInput(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=200)
-    password: str = Field(min_length=12, max_length=128)
+    password: str | None = Field(default=None, min_length=12, max_length=128)
 
     @field_validator("full_name")
     @classmethod

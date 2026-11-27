@@ -28,34 +28,26 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaginationBar } from "@/components/ui/pagination-bar";
-import { PasswordInput } from "@/components/ui/password-input";
 import { SelectField } from "@/components/ui/select-field";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type { PaginatedResponse, School } from "@/lib/types";
 import { slugify } from "@/lib/utils";
-import { extractFieldErrors, strongPasswordSchema } from "@/lib/validation";
+import { extractFieldErrors } from "@/lib/validation";
 
-const createSchoolSchema = z
-  .object({
-    name: z.string().trim().min(2, "School name must be at least 2 characters."),
-    slug: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .regex(
-        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-        "Slug must use lowercase letters, numbers, and hyphens only."
-      ),
-    adminName: z.string().trim().min(2, "Admin full name is required."),
-    adminEmail: z.string().trim().email("Enter a valid admin email."),
-    adminPassword: strongPasswordSchema,
-    confirmPassword: z.string().min(1, "Please confirm the password."),
-  })
-  .refine((d) => d.adminPassword === d.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
+const createSchoolSchema = z.object({
+  name: z.string().trim().min(2, "School name must be at least 2 characters."),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      "Slug must use lowercase letters, numbers, and hyphens only."
+    ),
+  adminName: z.string().trim().min(2, "Admin full name is required."),
+  adminEmail: z.string().trim().email("Enter a valid admin email."),
+});
 
 export default function PlatformSchoolsPage() {
   const { user } = useAuth();
@@ -73,8 +65,6 @@ export default function PlatformSchoolsPage() {
   const [slugTouched, setSlugTouched] = React.useState(false);
   const [adminName, setAdminName] = React.useState("");
   const [adminEmail, setAdminEmail] = React.useState("");
-  const [adminPassword, setAdminPassword] = React.useState("");
-  const [confirmPassword, setConfirmPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const { data, isLoading } = useQuery<PaginatedResponse<School>>({
@@ -101,13 +91,12 @@ export default function PlatformSchoolsPage() {
           initial_admin: {
             full_name: payload.adminName,
             email: payload.adminEmail,
-            password: payload.adminPassword,
           },
         }),
       }),
     onSuccess: (_data, vars) => {
       toast.success(
-        `School "${vars.name}" onboarded! Welcome email sent to ${vars.adminEmail}.`
+        `School "${vars.name}" onboarded! Password setup link sent to ${vars.adminEmail}.`
       );
       setCreateOpen(false);
       setName("");
@@ -115,8 +104,6 @@ export default function PlatformSchoolsPage() {
       setSlugTouched(false);
       setAdminName("");
       setAdminEmail("");
-      setAdminPassword("");
-      setConfirmPassword("");
       setFieldErrors({});
       queryClient.invalidateQueries({ queryKey: ["platform", "schools"] });
     },
@@ -172,8 +159,6 @@ export default function PlatformSchoolsPage() {
       slug,
       adminName,
       adminEmail,
-      adminPassword,
-      confirmPassword,
     });
     if (!parsed.success) {
       setFieldErrors(extractFieldErrors(parsed.error));
@@ -431,36 +416,11 @@ export default function PlatformSchoolsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="admin-pw">Password (min 12 chars)</Label>
-                    <PasswordInput
-                      id="admin-pw"
-                      value={adminPassword}
-                      hasError={Boolean(fieldErrors.adminPassword)}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                    />
-                    {fieldErrors.adminPassword && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.adminPassword}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="admin-confirm">Confirm password</Label>
-                    <PasswordInput
-                      id="admin-confirm"
-                      value={confirmPassword}
-                      hasError={Boolean(fieldErrors.confirmPassword)}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                    {fieldErrors.confirmPassword && (
-                      <p className="text-xs text-destructive">
-                        {fieldErrors.confirmPassword}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <p className="rounded-xl border border-border bg-muted/50 px-3.5 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                  A 24-hour single-use password setup link will be emailed to
+                  the School Administrator so they can set their own private
+                  password immediately.
+                </p>
 
                 <div className="flex justify-end gap-2 pt-2">
                   <Button

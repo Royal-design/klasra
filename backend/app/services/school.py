@@ -43,12 +43,13 @@ def create_school_with_admin(
             message="A user with this email already exists.",
         )
 
+    initial_password = payload.initial_admin.password or generate_token(32)
     school = school_repo.create_school(db, name=payload.name, slug=payload.slug)
     admin_user = user_repo.create_user(
         db,
         email=str(payload.initial_admin.email),
         full_name=payload.initial_admin.full_name,
-        password_hash=hash_password(payload.initial_admin.password),
+        password_hash=hash_password(initial_password),
         is_platform_admin=False,
         is_active=True,
     )
@@ -115,7 +116,7 @@ def create_school_with_admin(
             ),
         )
         try:
-            email_provider.send(message)
+            email_provider.send_email(message)
         except Exception:
             logger.exception("Failed to send school onboarding email for school %s", school.id)
 
