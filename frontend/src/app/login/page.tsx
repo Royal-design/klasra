@@ -21,13 +21,15 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState("");
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
+  const [redirecting, setRedirecting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!isLoading && user) {
+    if (!isLoading && user && !redirecting) {
+      setRedirecting(true);
       router.replace("/dashboard");
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, redirecting, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +45,15 @@ export default function LoginPage() {
     try {
       const profile = await login(parsed.data.email, parsed.data.password);
       toast.success(`Welcome back, ${profile.full_name}`);
-      router.push("/dashboard");
+      setRedirecting(true);
+      const params = new URLSearchParams(window.location.search);
+      const nextParam = params.get("next");
+      const safeTarget =
+        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+          ? nextParam
+          : "/dashboard";
+      router.replace(safeTarget);
+      router.refresh();
     } catch (err) {
       const msg =
         err instanceof ApiClientError
@@ -51,7 +61,6 @@ export default function LoginPage() {
           : "Unable to sign in. Check your credentials and try again.";
       setErrorMsg(msg);
       toast.error(msg);
-    } finally {
       setSubmitting(false);
     }
   }
@@ -134,8 +143,18 @@ export default function LoginPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full" size="lg" disabled={submitting}>
-          {submitting ? (
+        <Button
+          type="submit"
+          className="w-full"
+          size="lg"
+          disabled={submitting || redirecting}
+        >
+          {redirecting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Opening dashboard...
+            </>
+          ) : submitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Signing in...
