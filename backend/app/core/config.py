@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     database_url: str
 
     # Comma-separated or JSON list of trusted frontend origins. Never allow "*".
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # Session & cookie hardening
     session_ttl_hours: int = 12
