@@ -32,6 +32,7 @@ import { SelectField } from "@/components/ui/select-field";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type { PaginatedResponse, School } from "@/lib/types";
+import { slugify } from "@/lib/utils";
 import { extractFieldErrors, strongPasswordSchema } from "@/lib/validation";
 
 const createSchoolSchema = z
@@ -66,6 +67,7 @@ export default function PlatformSchoolsPage() {
   // Create form state
   const [name, setName] = React.useState("");
   const [slug, setSlug] = React.useState("");
+  const [slugTouched, setSlugTouched] = React.useState(false);
   const [adminName, setAdminName] = React.useState("");
   const [adminEmail, setAdminEmail] = React.useState("");
   const [adminPassword, setAdminPassword] = React.useState("");
@@ -105,6 +107,7 @@ export default function PlatformSchoolsPage() {
       setCreateOpen(false);
       setName("");
       setSlug("");
+      setSlugTouched(false);
       setAdminName("");
       setAdminEmail("");
       setAdminPassword("");
@@ -319,14 +322,10 @@ export default function PlatformSchoolsPage() {
                       value={name}
                       hasError={Boolean(fieldErrors.name)}
                       onChange={(e) => {
-                        setName(e.target.value);
-                        if (!slug) {
-                          setSlug(
-                            e.target.value
-                              .toLowerCase()
-                              .replace(/[^a-z0-9]+/g, "-")
-                              .replace(/^-|-$/g, "")
-                          );
+                        const nextName = e.target.value;
+                        setName(nextName);
+                        if (!slugTouched) {
+                          setSlug(slugify(nextName));
                         }
                       }}
                     />
@@ -341,7 +340,11 @@ export default function PlatformSchoolsPage() {
                       placeholder="greenfield-high"
                       value={slug}
                       hasError={Boolean(fieldErrors.slug)}
-                      onChange={(e) => setSlug(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSlug(val);
+                        setSlugTouched(val.trim().length > 0);
+                      }}
                       className="font-mono text-xs"
                     />
                     {fieldErrors.slug && (
