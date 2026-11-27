@@ -1,16 +1,15 @@
-"use client";
-
 import Link from "next/link";
 import {
   ArrowRight,
   ClipboardCheck,
   FileKey2,
-  GraduationCap,
   Lock,
+  MessageSquareQuote,
   ScrollText,
   ShieldAlert,
   UserCheck,
 } from "lucide-react";
+import { KlasraLogo } from "@/components/brand/klasra-logo";
 import { Button } from "@/components/ui/button";
 
 const steps = [
@@ -23,17 +22,17 @@ const steps = [
   },
   {
     step: "02",
-    title: "Verify Students & Parents",
+    title: "Approve Students & Guardians",
     description:
       "Students self-register with short-lived school codes and wait for approval; parents verify email links prior to admin approval.",
     icon: UserCheck,
   },
   {
     step: "03",
-    title: "Teach, Assess & Track Progress",
+    title: "Teach, Assess & Share Progress",
     description:
-      "Publish lessons, assignments, quizzes, and exams, record attendance, and release verified results to students and parents.",
-    icon: GraduationCap,
+      "Publish lessons, assignments, quizzes, and exams, record attendance, and release verified results to students and approved parents.",
+    icon: ScrollText,
   },
 ];
 
@@ -46,7 +45,7 @@ const securityPillars = [
   },
   {
     icon: ShieldAlert,
-    title: "Approved Guardian Access",
+    title: "Verified Guardian Access",
     description:
       "Parents view children only after email verification and School Admin approval, with instant revocation.",
   },
@@ -54,7 +53,7 @@ const securityPillars = [
     icon: FileKey2,
     title: "Private Signed Storage",
     description:
-      "Videos and documents live in private object storage with magic-byte checks and 5-minute signed URLs.",
+      "Uploaded videos and documents live in private object storage with magic-byte checks and short-lived signed URLs.",
   },
   {
     icon: ScrollText,
@@ -70,53 +69,55 @@ export function OnboardingAndSecurity() {
       {/* 3-Step Onboarding */}
       <section
         id="onboarding"
-        className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8"
+        className="border-t border-border bg-background py-20"
       >
-        <div className="max-w-xl">
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Onboarding Flow
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
-            From school setup to live classrooms in three steps.
-          </h2>
-        </div>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+              Getting Started
+            </p>
+            <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
+              From school onboarding to live classrooms in three clear steps.
+            </h2>
+          </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {steps.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div
-                key={item.step}
-                className="rounded-2xl border border-border bg-card p-6"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
-                    <Icon className="h-4 w-4" />
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {steps.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.step}
+                  className="rounded-2xl border border-border bg-card p-6"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="font-mono text-xs font-semibold text-muted-foreground">
+                      STEP {item.step}
+                    </span>
                   </div>
-                  <span className="font-mono text-xs font-semibold text-muted-foreground">
-                    STEP {item.step}
-                  </span>
+                  <h3 className="font-display text-base font-semibold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="font-display text-base font-semibold text-foreground">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {item.description}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      {/* Security & Privacy Strip */}
+      {/* Security & Privacy Architecture */}
       <section
         id="security"
         className="border-y border-border bg-[#0F0F12] py-20 text-zinc-100 dark:bg-[#0E0E11]"
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-400">
               Security &amp; Child Privacy
             </p>
             <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">
@@ -153,22 +154,47 @@ export function OnboardingAndSecurity() {
         </div>
       </section>
 
-      {/* Clean, Restrained Closing CTA */}
-      <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+      {/* Honest Pilot / Testimonial Placeholder (No Fabricated Claims) */}
+      <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-dashed border-border bg-card/60 p-6 sm:p-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <MessageSquareQuote className="h-4 w-4 text-primary" />
+                <span>School Feedback &amp; Case Studies</span>
+              </div>
+              <h2 className="mt-2 font-display text-xl font-bold tracking-tight text-foreground">
+                Verified stories from partner secondary schools will appear here.
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Placeholder section reserved for real testimonials, term-adoption
+                outcomes, and principal or parent feedback once pilot schools
+                complete onboarding.
+              </p>
+            </div>
+            <span className="w-fit rounded-full border border-border bg-background px-3 py-1 font-mono text-[11px] font-medium text-muted-foreground">
+              Pilot Ready
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Final Call to Action */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-20 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-border bg-card p-8 sm:flex-row sm:items-center sm:p-10">
           <div className="max-w-xl">
             <h2 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-              Ready to sign in to your school portal?
+              Ready to enter your school portal?
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Access your School Admin, Teacher, Student, or Parent workspace,
-              or register with a cohort code.
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Sign in as a School Admin, Teacher, Student, or Parent — or use a
+              school registration code to request student access.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button size="lg" asChild>
               <Link href="/login">
-                Sign In
+                Sign In to Klasra
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -182,13 +208,8 @@ export function OnboardingAndSecurity() {
       {/* Footer */}
       <footer className="border-t border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 py-8 sm:flex-row sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="h-4 w-4" />
-            </div>
-            <span className="font-display text-sm font-bold text-foreground">
-              Klasra
-            </span>
+          <div className="flex items-center gap-3">
+            <KlasraLogo markClassName="h-6 w-6" />
             <span className="text-xs text-muted-foreground">
               · Multi-School Secondary LMS
             </span>

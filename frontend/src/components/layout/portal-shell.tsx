@@ -9,7 +9,6 @@ import {
   Building2,
   CalendarCheck2,
   ClipboardList,
-  GraduationCap,
   HeartHandshake,
   KeyRound,
   LayoutDashboard,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { KlasraMark } from "@/components/brand/klasra-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -147,11 +147,9 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <GraduationCap className="h-4 w-4" />
-        </div>
+        <KlasraMark className="h-8 w-8" />
         <div className="min-w-0">
-          <p className="truncate font-display text-sm font-bold text-foreground">
+          <p className="truncate font-display text-sm font-bold tracking-tight text-foreground">
             Klasra
           </p>
           <p className="truncate text-[11px] font-medium text-muted-foreground">

@@ -3,7 +3,8 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, GraduationCap, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { KlasraLogo } from "@/components/brand/klasra-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface AuthShellProps {
@@ -45,13 +46,8 @@ export function AuthShell({
 
         {/* Top Brand Mark */}
         <div className="relative z-10 flex items-center justify-between p-8">
-          <Link href="/" className="flex items-center gap-2.5 text-white">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="h-4 w-4" />
-            </div>
-            <span className="font-display text-base font-bold tracking-tight">
-              Klasra
-            </span>
+          <Link href="/" aria-label="Klasra Home">
+            <KlasraLogo inverted />
           </Link>
         </div>
 
@@ -73,13 +69,8 @@ export function AuthShell({
       {/* Right Form Column */}
       <div className="flex flex-col lg:col-span-6">
         <header className="flex items-center justify-between px-4 py-5 sm:px-8">
-          <Link href="/" className="flex items-center gap-2.5 lg:invisible">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <GraduationCap className="h-4 w-4" />
-            </div>
-            <span className="font-display text-base font-bold tracking-tight text-foreground">
-              Klasra
-            </span>
+          <Link href="/" className="lg:invisible" aria-label="Klasra Home">
+            <KlasraLogo />
           </Link>
 
           <div className="flex items-center gap-3">

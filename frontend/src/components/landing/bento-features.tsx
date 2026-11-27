@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BookOpenCheck,
   CalendarCheck2,
@@ -13,46 +11,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const features = [
   {
-    title: "Lessons, Video & Private Materials",
+    title: "Lessons, Video & Private Files",
     description:
-      "Publish structured lessons with YouTube, Vimeo, or Loom embeds, direct 50 MB lesson video uploads, and protected PDFs or slides via short-lived signed URLs.",
+      "Deliver structured lessons with YouTube, Vimeo, or Loom embeds, 50 MB direct video uploads, and protected PDFs or slides served via short-lived signed URLs.",
     icon: Video,
-    meta: "MP4 / WebM / PDF / DOCX",
+    meta: "MP4 · WebM · PDF · DOCX · PPTX",
   },
   {
     title: "Timed Quizzes, Tests & Exams",
     description:
-      "Create auto-graded multiple-choice, true/false, and multi-select questions alongside manually graded short-answer essays with availability windows and attempt limits.",
+      "Combine auto-graded multiple-choice, true/false, and multi-select questions with teacher-graded essays, availability windows, and attempt limits.",
     icon: ClipboardCheck,
     meta: "Auto + Manual Grading",
   },
   {
     title: "Assignments & Version History",
     description:
-      "Configure due dates, late-submission rules, and resubmissions per assignment. Students submit text and files while every version stays preserved.",
+      "Set due dates, late-submission rules, and resubmissions per assignment. Students upload files or typed responses with full version history preserved.",
     icon: FileUp,
     meta: "Versioned Submissions",
   },
   {
     title: "Draft-to-Publish Gradebook",
     description:
-      "Review submissions and exam responses in draft mode before publishing scores and written feedback to students and approved parents.",
+      "Grade submissions and assessments privately in draft state and release scores with written feedback when review is complete.",
     icon: BookOpenCheck,
-    meta: "Controlled Visibility",
+    meta: "Controlled Release",
   },
   {
-    title: "Multi-School Parent Portal",
+    title: "Multi-School Parent Access",
     description:
-      "Parents with children in different schools use one verified account. Email verification plus school admin approval protects every child's records.",
+      "Parents verify once and link approved children across participating schools — viewing only published grades, assessment scores, and attendance.",
     icon: HeartHandshake,
     meta: "Approved Links Only",
   },
   {
-    title: "Attendance & Academic Setup",
+    title: "Attendance & Roster Imports",
     description:
-      "Record Present, Absent, Late, or Excused with staff attribution, adapt school terminology, and bulk-import rosters via CSV/XLSX with dry-run validation.",
+      "Record Present, Absent, Late, or Excused with staff attribution, adapt school terminology, and validate CSV/XLSX rosters before import.",
     icon: CalendarCheck2,
-    meta: "Full Audit Trail",
+    meta: "Audited Records",
   },
 ];
 
@@ -63,15 +61,15 @@ export function BentoFeatures() {
       className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8"
     >
       <div className="max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-          Core Capabilities
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+          Standout Capabilities
         </p>
         <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-foreground">
-          Everything a secondary school runs on, organized clearly.
+          Practical tools built for daily secondary-school work.
         </h2>
-        <p className="mt-3 text-base text-muted-foreground">
-          Built with server-enforced school separation, predictable workflows,
-          and clear audit history across every academic term.
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+          Every feature is backed by server-enforced school separation,
+          predictable role permissions, and clear audit history.
         </p>
       </div>
 

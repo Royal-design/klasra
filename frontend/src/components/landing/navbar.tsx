@@ -2,14 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { GraduationCap, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { KlasraLogo } from "@/components/brand/klasra-logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Roles", href: "#roles" },
-  { label: "How It Works", href: "#onboarding" },
+  { label: "Why Klasra", href: "#why-klasra" },
+  { label: "Experience", href: "#roles" },
+  { label: "Capabilities", href: "#features" },
   { label: "Security", href: "#security" },
 ];
 
@@ -17,23 +18,22 @@ export function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <GraduationCap className="h-4 w-4" />
-          </div>
-          <span className="font-display text-base font-bold tracking-tight text-foreground">
-            Klasra
-          </span>
+        <Link
+          href="/"
+          aria-label="Klasra Home"
+          className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <KlasraLogo />
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav aria-label="Primary navigation" className="hidden items-center gap-8 md:flex">
           {navLinks.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md px-1 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {item.label}
             </a>
@@ -57,6 +57,7 @@ export function LandingNavbar() {
             size="icon"
             onClick={() => setMobileOpen((prev) => !prev)}
             aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
             className="h-9 w-9 rounded-lg"
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -82,7 +83,7 @@ export function LandingNavbar() {
                 <Link href="/register/student">Register with School Code</Link>
               </Button>
               <Button asChild className="w-full">
-                <Link href="/login">Sign In</Link>
+                <Link href="/login">Sign In to Your School</Link>
               </Button>
             </div>
           </div>

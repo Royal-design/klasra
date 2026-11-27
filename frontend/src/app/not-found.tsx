@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { KlasraMark } from "@/components/brand/klasra-logo";
 import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <GraduationCap className="h-5 w-5" />
-      </div>
+      <KlasraMark className="mb-5 h-11 w-11" />
       <p className="font-mono text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         404 · Page Not Found
       </p>
