@@ -12,11 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import type { MessageResponse } from "@/lib/types";
+import { changePasswordSchema, extractFieldErrors } from "@/lib/validation";
 
 interface ChangePasswordDialogProps {
   open: boolean;
@@ -32,21 +33,28 @@ export function ChangePasswordDialog({
   const [currentPassword, setCurrentPassword] = React.useState("");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error("New passwords do not match.");
+    const parsed = changePasswordSchema.safeParse({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
       return;
     }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest<MessageResponse>("/auth/change-password", {
         method: "POST",
         body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
+          current_password: parsed.data.currentPassword,
+          new_password: parsed.data.newPassword,
         }),
       });
       toast.success("Password changed. Please sign in with your new password.");
@@ -74,38 +82,53 @@ export function ChangePasswordDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="cp-current">Current password</Label>
-            <Input
+            <PasswordInput
               id="cp-current"
-              type="password"
-              required
+              autoComplete="current-password"
               value={currentPassword}
+              hasError={Boolean(fieldErrors.currentPassword)}
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
+            {fieldErrors.currentPassword && (
+              <p className="text-xs text-destructive">
+                {fieldErrors.currentPassword}
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="cp-new">New password (min 12 characters)</Label>
-            <Input
+            <Label htmlFor="cp-new">New password</Label>
+            <PasswordInput
               id="cp-new"
-              type="password"
-              required
-              minLength={12}
+              autoComplete="new-password"
+              placeholder="At least 12 characters"
               value={newPassword}
+              hasError={Boolean(fieldErrors.newPassword)}
               onChange={(e) => setNewPassword(e.target.value)}
             />
+            {fieldErrors.newPassword && (
+              <p className="text-xs text-destructive">
+                {fieldErrors.newPassword}
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cp-confirm">Confirm new password</Label>
-            <Input
+            <PasswordInput
               id="cp-confirm"
-              type="password"
-              required
-              minLength={12}
+              autoComplete="new-password"
+              placeholder="Re-enter your new password"
               value={confirmPassword}
+              hasError={Boolean(fieldErrors.confirmPassword)}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
+            {fieldErrors.confirmPassword && (
+              <p className="text-xs text-destructive">
+                {fieldErrors.confirmPassword}
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

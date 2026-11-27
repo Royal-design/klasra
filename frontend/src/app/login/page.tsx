@@ -3,21 +3,23 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { toast } from "sonner";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
+import { extractFieldErrors, loginSchema } from "@/lib/validation";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isLoading } = useAuth();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [showPassword, setShowPassword] = React.useState(false);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
@@ -30,9 +32,16 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
+
+    const parsed = loginSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
-      const profile = await login(email.trim(), password);
+      const profile = await login(parsed.data.email, parsed.data.password);
       toast.success(`Welcome back, ${profile.full_name}`);
       router.push("/dashboard");
     } catch (err) {
@@ -76,7 +85,7 @@ export default function LoginPage() {
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {errorMsg && (
           <div
             role="alert"
@@ -92,11 +101,14 @@ export default function LoginPage() {
             id="email"
             type="email"
             autoComplete="email"
-            required
             placeholder="you@school.edu"
             value={email}
+            hasError={Boolean(fieldErrors.email)}
             onChange={(e) => setEmail(e.target.value)}
           />
+          {fieldErrors.email && (
+            <p className="text-xs text-destructive">{fieldErrors.email}</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -104,35 +116,22 @@ export default function LoginPage() {
             <Label htmlFor="password">Password</Label>
             <Link
               href="/forgot-password"
-              className="text-xs font-semibold text-primary hover:underline"
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
             >
               Forgot password?
             </Link>
           </div>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              required
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            hasError={Boolean(fieldErrors.password)}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {fieldErrors.password && (
+            <p className="text-xs text-destructive">{fieldErrors.password}</p>
+          )}
         </div>
 
         <Button type="submit" className="w-full" size="lg" disabled={submitting}>

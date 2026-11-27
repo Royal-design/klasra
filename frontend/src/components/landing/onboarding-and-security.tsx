@@ -115,17 +115,17 @@ export function OnboardingAndSecurity() {
       {/* Security & Privacy Strip */}
       <section
         id="security"
-        className="border-y border-border/60 bg-slate-950 py-20 text-slate-50"
+        className="border-y border-border bg-[#0F0F12] py-20 text-zinc-100 dark:bg-[#0E0E11]"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-400/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-300">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
               Security &amp; Child Privacy First
             </span>
             <h2 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
               Built to protect student records across every school.
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">
+            <p className="mt-3 text-sm leading-relaxed text-zinc-400 sm:text-base">
               Argon2id password hashing, HttpOnly CSRF-protected sessions, private
               encrypted storage, and NDPA-aligned child-data safeguards are built in
               from day one.
@@ -138,15 +138,15 @@ export function OnboardingAndSecurity() {
               return (
                 <div
                   key={pillar.title}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur transition-colors hover:border-teal-400/40"
+                  className="rounded-2xl border border-white/[0.08] bg-[#16161A] p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] transition-colors hover:border-white/15"
                 >
-                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300">
+                  <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] text-zinc-200">
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="font-display text-base font-bold text-white">
                     {pillar.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                     {pillar.description}
                   </p>
                 </div>

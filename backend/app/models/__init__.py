@@ -8,6 +8,12 @@ from app.models.academic import (
     Term,
     YearLevel,
 )
+from app.models.assessment import (
+    Assessment,
+    AssessmentAnswer,
+    AssessmentAttempt,
+    AssessmentQuestion,
+)
 from app.models.assignment import Assignment, Submission
 from app.models.attendance import AttendanceRecord
 from app.models.audit import AuditEvent
@@ -24,6 +30,10 @@ from app.models.user import User
 
 __all__ = [
     "AcademicYear",
+    "Assessment",
+    "AssessmentAnswer",
+    "AssessmentAttempt",
+    "AssessmentQuestion",
     "Assignment",
     "AttendanceRecord",
     "AuditEvent",

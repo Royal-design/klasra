@@ -9,30 +9,39 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import type { MessageResponse } from "@/lib/types";
+import { extractFieldErrors, resetPasswordSchema } from "@/lib/validation";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const [token, setToken] = React.useState(searchParams.get("token") || "");
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [done, setDone] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.");
+    const parsed = resetPasswordSchema.safeParse({
+      token,
+      newPassword,
+      confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
       return;
     }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest<MessageResponse>("/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({
-          token: token.trim(),
-          new_password: newPassword,
+          token: parsed.data.token,
+          new_password: parsed.data.newPassword,
         }),
       });
       setDone(true);
@@ -51,7 +60,7 @@ function ResetPasswordForm() {
   if (done) {
     return (
       <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
         <p className="text-sm font-semibold text-foreground">
           Password reset successful
         </p>
@@ -66,43 +75,52 @@ function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="token">Reset token</Label>
         <Input
           id="token"
-          required
           placeholder="Paste reset token from your email"
           value={token}
+          hasError={Boolean(fieldErrors.token)}
           onChange={(e) => setToken(e.target.value)}
           className="font-mono text-xs"
         />
+        {fieldErrors.token && (
+          <p className="text-xs text-destructive">{fieldErrors.token}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="newPassword">New password (min 12 characters)</Label>
-        <Input
+        <Label htmlFor="newPassword">New password</Label>
+        <PasswordInput
           id="newPassword"
-          type="password"
-          required
-          minLength={12}
+          autoComplete="new-password"
           placeholder="At least 12 characters"
           value={newPassword}
+          hasError={Boolean(fieldErrors.newPassword)}
           onChange={(e) => setNewPassword(e.target.value)}
         />
+        {fieldErrors.newPassword && (
+          <p className="text-xs text-destructive">{fieldErrors.newPassword}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="confirmPassword">Confirm new password</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
-          required
-          minLength={12}
+          autoComplete="new-password"
           placeholder="Re-enter your new password"
           value={confirmPassword}
+          hasError={Boolean(fieldErrors.confirmPassword)}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
+        {fieldErrors.confirmPassword && (
+          <p className="text-xs text-destructive">
+            {fieldErrors.confirmPassword}
+          </p>
+        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>

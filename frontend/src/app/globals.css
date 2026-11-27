@@ -3,48 +3,50 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #fafafa;
+  --foreground: #09090b;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #09090b;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --popover-foreground: #09090b;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --secondary: #0d9488;
+  --secondary: #10b981;
   --secondary-foreground: #ffffff;
-  --muted: #f1f5f9;
-  --muted-foreground: #475569;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
   --accent: #f59e0b;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
+  --accent-foreground: #09090b;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #4f46e5;
+  --border: rgba(9, 9, 11, 0.08);
+  --input: #f4f4f5;
+  --ring: rgba(79, 70, 229, 0.45);
   --radius: 0.75rem;
 }
 
+/* Linear / Raycast inspired dark charcoal theme: neutral obsidian surfaces,
+   hairline muted borders, crisp zinc typography, restrained accents. */
 .dark {
-  --background: #090d16;
-  --foreground: #f8fafc;
-  --card: #111827;
-  --card-foreground: #f8fafc;
-  --popover: #111827;
-  --popover-foreground: #f8fafc;
+  --background: #0a0a0b;
+  --foreground: #f4f4f5;
+  --card: #141416;
+  --card-foreground: #f4f4f5;
+  --popover: #141416;
+  --popover-foreground: #f4f4f5;
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #2dd4bf;
-  --secondary-foreground: #042f2e;
-  --muted: #1a2234;
-  --muted-foreground: #94a3b8;
+  --secondary: #34d399;
+  --secondary-foreground: #052e16;
+  --muted: #1b1b1f;
+  --muted-foreground: #a1a1aa;
   --accent: #fbbf24;
-  --accent-foreground: #090d16;
-  --destructive: #f87171;
-  --destructive-foreground: #090d16;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.14);
-  --ring: #6366f1;
+  --accent-foreground: #0a0a0b;
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: #1b1b1f;
+  --ring: rgba(99, 102, 241, 0.5);
 }
 
 @theme inline {
@@ -94,10 +96,10 @@
   }
 }
 
-/* Subtle ambient dot grid for hero background */
+/* Ultra-subtle monochrome dot grid */
 .bg-scholarly-grid {
   background-image: radial-gradient(
-    color-mix(in srgb, var(--primary) 16%, transparent) 1px,
+    color-mix(in srgb, var(--foreground) 10%, transparent) 1px,
     transparent 1px
   );
   background-size: 28px 28px;

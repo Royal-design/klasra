@@ -9,22 +9,39 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
+import { extractFieldErrors, parentVerifySchema } from "@/lib/validation";
 
 function ParentVerifyForm() {
   const searchParams = useSearchParams();
   const [token, setToken] = React.useState(searchParams.get("token") || "");
   const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [verified, setVerified] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = parentVerifySchema.safeParse({
+      token,
+      password,
+      confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest("/guardian-links/verify", {
         method: "POST",
-        body: JSON.stringify({ token: token.trim(), password }),
+        body: JSON.stringify({
+          token: parsed.data.token,
+          password: parsed.data.password,
+        }),
       });
       setVerified(true);
       toast.success("Email verified! Waiting for school admin approval.");
@@ -41,8 +58,8 @@ function ParentVerifyForm() {
 
   if (verified) {
     return (
-      <div className="space-y-4 rounded-2xl border border-teal-500/25 bg-teal-500/10 p-5 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-teal-600 dark:text-teal-400" />
+      <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center">
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
         <p className="text-sm font-bold text-foreground">
           Guardian email verified
         </p>
@@ -59,36 +76,58 @@ function ParentVerifyForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="token">Parent verification token</Label>
         <Input
           id="token"
-          required
           placeholder="Paste verification token from email"
           value={token}
+          hasError={Boolean(fieldErrors.token)}
           onChange={(e) => setToken(e.target.value)}
           className="font-mono text-xs"
         />
+        {fieldErrors.token && (
+          <p className="text-xs text-destructive">{fieldErrors.token}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="password">
           Account password (create new or enter existing)
         </Label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
-          required
-          minLength={12}
-          placeholder="Min 12 characters"
+          autoComplete="new-password"
+          placeholder="At least 12 characters"
           value={password}
+          hasError={Boolean(fieldErrors.password)}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {fieldErrors.password && (
+          <p className="text-xs text-destructive">{fieldErrors.password}</p>
+        )}
         <p className="text-[11px] text-muted-foreground">
           Already have a parent account from another school? Enter your existing
           password to link this child to the same login.
         </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <PasswordInput
+          id="confirmPassword"
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          hasError={Boolean(fieldErrors.confirmPassword)}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+        {fieldErrors.confirmPassword && (
+          <p className="text-xs text-destructive">
+            {fieldErrors.confirmPassword}
+          </p>
+        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>

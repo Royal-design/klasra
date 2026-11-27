@@ -9,22 +9,39 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
+import { extractFieldErrors, staffAcceptSchema } from "@/lib/validation";
 
 function StaffAcceptForm() {
   const searchParams = useSearchParams();
   const [token, setToken] = React.useState(searchParams.get("token") || "");
   const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [activated, setActivated] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = staffAcceptSchema.safeParse({
+      token,
+      password,
+      confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest("/staff-invitations/accept", {
         method: "POST",
-        body: JSON.stringify({ token: token.trim(), password }),
+        body: JSON.stringify({
+          token: parsed.data.token,
+          password: parsed.data.password,
+        }),
       });
       setActivated(true);
       toast.success("Staff account activated! You can now sign in.");
@@ -42,7 +59,7 @@ function StaffAcceptForm() {
   if (activated) {
     return (
       <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
         <p className="text-sm font-bold text-foreground">
           Staff account activated
         </p>
@@ -57,30 +74,52 @@ function StaffAcceptForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="token">Staff invitation token</Label>
         <Input
           id="token"
-          required
           placeholder="Paste invitation token from email"
           value={token}
+          hasError={Boolean(fieldErrors.token)}
           onChange={(e) => setToken(e.target.value)}
           className="font-mono text-xs"
         />
+        {fieldErrors.token && (
+          <p className="text-xs text-destructive">{fieldErrors.token}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">Set your password (min 12 characters)</Label>
-        <Input
+        <Label htmlFor="password">Set your password</Label>
+        <PasswordInput
           id="password"
-          type="password"
-          required
-          minLength={12}
-          placeholder="Choose a strong password"
+          autoComplete="new-password"
+          placeholder="At least 12 characters"
           value={password}
+          hasError={Boolean(fieldErrors.password)}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {fieldErrors.password && (
+          <p className="text-xs text-destructive">{fieldErrors.password}</p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <PasswordInput
+          id="confirmPassword"
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          hasError={Boolean(fieldErrors.confirmPassword)}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+        {fieldErrors.confirmPassword && (
+          <p className="text-xs text-destructive">
+            {fieldErrors.confirmPassword}
+          </p>
+        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>

@@ -10,19 +10,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
 import type { MessageResponse } from "@/lib/types";
+import { extractFieldErrors, forgotPasswordSchema } from "@/lib/validation";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [sent, setSent] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = forgotPasswordSchema.safeParse({ email });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest<MessageResponse>("/auth/forgot-password", {
         method: "POST",
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: parsed.data.email }),
       });
       setSent(true);
       toast.success("If an account exists, a reset link has been sent.");
@@ -53,7 +61,7 @@ export default function ForgotPasswordPage() {
     >
       {sent ? (
         <div className="space-y-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-center">
-          <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
           <p className="text-sm font-semibold text-foreground">
             Check your inbox
           </p>
@@ -66,17 +74,20 @@ export default function ForgotPasswordPage() {
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email address</Label>
             <Input
               id="email"
               type="email"
-              required
               placeholder="you@school.edu"
               value={email}
+              hasError={Boolean(fieldErrors.email)}
               onChange={(e) => setEmail(e.target.value)}
             />
+            {fieldErrors.email && (
+              <p className="text-xs text-destructive">{fieldErrors.email}</p>
+            )}
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={submitting}>
             {submitting ? (

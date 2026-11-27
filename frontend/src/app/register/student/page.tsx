@@ -9,7 +9,9 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ApiClientError, apiRequest } from "@/lib/api-client";
+import { extractFieldErrors, studentRegisterSchema } from "@/lib/validation";
 
 function StudentRegisterForm() {
   const searchParams = useSearchParams();
@@ -20,21 +22,36 @@ function StudentRegisterForm() {
   const [email, setEmail] = React.useState("");
   const [studentRef, setStudentRef] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const parsed = studentRegisterSchema.safeParse({
+      codeOrToken,
+      fullName,
+      email,
+      studentRef,
+      password,
+      confirmPassword,
+    });
+    if (!parsed.success) {
+      setFieldErrors(extractFieldErrors(parsed.error));
+      return;
+    }
+    setFieldErrors({});
     setSubmitting(true);
     try {
       await apiRequest("/registrations/students", {
         method: "POST",
         body: JSON.stringify({
-          email: email.trim(),
-          full_name: fullName.trim(),
-          password,
-          code_or_token: codeOrToken.trim(),
-          student_reference: studentRef.trim() || null,
+          email: parsed.data.email,
+          full_name: parsed.data.fullName,
+          password: parsed.data.password,
+          code_or_token: parsed.data.codeOrToken,
+          student_reference: parsed.data.studentRef || null,
         }),
       });
       setSubmitted(true);
@@ -53,7 +70,7 @@ function StudentRegisterForm() {
   if (submitted) {
     return (
       <div className="space-y-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 p-5 text-center">
-        <CheckCircle2 className="mx-auto h-10 w-10 text-amber-600 dark:text-amber-400" />
+        <CheckCircle2 className="mx-auto h-10 w-10 text-amber-500" />
         <p className="text-sm font-bold text-foreground">
           Pending School Admin Approval
         </p>
@@ -70,29 +87,34 @@ function StudentRegisterForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="code">School registration code or invite token</Label>
         <Input
           id="code"
-          required
           placeholder="e.g. SCH-2026-AB12"
           value={codeOrToken}
+          hasError={Boolean(fieldErrors.codeOrToken)}
           onChange={(e) => setCodeOrToken(e.target.value)}
           className="font-mono text-xs"
         />
+        {fieldErrors.codeOrToken && (
+          <p className="text-xs text-destructive">{fieldErrors.codeOrToken}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="fullName">Full name</Label>
         <Input
           id="fullName"
-          required
-          minLength={2}
           placeholder="e.g. Amara Okafor"
           value={fullName}
+          hasError={Boolean(fieldErrors.fullName)}
           onChange={(e) => setFullName(e.target.value)}
         />
+        {fieldErrors.fullName && (
+          <p className="text-xs text-destructive">{fieldErrors.fullName}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -100,11 +122,14 @@ function StudentRegisterForm() {
         <Input
           id="email"
           type="email"
-          required
           placeholder="amara@school.edu"
           value={email}
+          hasError={Boolean(fieldErrors.email)}
           onChange={(e) => setEmail(e.target.value)}
         />
+        {fieldErrors.email && (
+          <p className="text-xs text-destructive">{fieldErrors.email}</p>
+        )}
       </div>
 
       <div className="space-y-1.5">
@@ -119,16 +144,35 @@ function StudentRegisterForm() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="password">Create password (min 12 characters)</Label>
-        <Input
+        <Label htmlFor="password">Create password</Label>
+        <PasswordInput
           id="password"
-          type="password"
-          required
-          minLength={12}
-          placeholder="Choose a strong password"
+          autoComplete="new-password"
+          placeholder="At least 12 characters"
           value={password}
+          hasError={Boolean(fieldErrors.password)}
           onChange={(e) => setPassword(e.target.value)}
         />
+        {fieldErrors.password && (
+          <p className="text-xs text-destructive">{fieldErrors.password}</p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="confirmPassword">Confirm password</Label>
+        <PasswordInput
+          id="confirmPassword"
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          hasError={Boolean(fieldErrors.confirmPassword)}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+        {fieldErrors.confirmPassword && (
+          <p className="text-xs text-destructive">
+            {fieldErrors.confirmPassword}
+          </p>
+        )}
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>
