@@ -21,7 +21,7 @@ export function KlasraMark({ className }: KlasraMarkProps) {
       aria-hidden="true"
       className={cn("h-7 w-7 shrink-0", className)}
     >
-      <rect width="32" height="32" rx="8" className="fill-primary" />
+      <rect width="32" height="32" rx="8" fill="#059669" />
       {/* Left structural pillar */}
       <rect x="8.5" y="7.5" width="3.5" height="17" rx="1.25" fill="white" />
       {/* Upper ascending plane */}
@@ -29,10 +29,10 @@ export function KlasraMark({ className }: KlasraMarkProps) {
         d="M14 15.2L20.6 8.1C21.1 7.6 21.8 7.5 22.4 7.5H23.7L17.2 14.8L14 15.2Z"
         fill="white"
       />
-      {/* Lower forward plane (subtle emerald-tinted highlight for progression) */}
+      {/* Lower forward plane (subtle mint highlight for progression) */}
       <path
         d="M14 16.5L17.5 16L24 24.5H20.1C19.5 24.5 18.9 24.2 18.5 23.7L14 16.5Z"
-        fill="#A5F3FC"
+        fill="#A7F3D0"
       />
     </svg>
   );

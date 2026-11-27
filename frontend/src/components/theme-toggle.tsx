@@ -32,9 +32,9 @@ export function ThemeToggle() {
       className="rounded-full border-border/80 bg-card/80 backdrop-blur hover:border-primary/40"
     >
       {isDark ? (
-        <Sun className="h-4 w-4 text-amber-400 transition-transform duration-300 rotate-0" />
+        <Sun className="h-4 w-4 text-emerald-400 transition-transform duration-300 rotate-0" />
       ) : (
-        <Moon className="h-4 w-4 text-indigo-600 transition-transform duration-300 rotate-0" />
+        <Moon className="h-4 w-4 text-zinc-700 transition-transform duration-300 rotate-0" />
       )}
     </Button>
   );
