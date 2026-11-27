@@ -85,9 +85,9 @@ export function AuthShell({
           </div>
         </header>
 
-        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-8 lg:justify-start lg:px-10 xl:px-14">
-          <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl">
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#141416] sm:p-8">
+        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-8 lg:justify-start lg:px-10 xl:px-12">
+          <div className="w-full max-w-[500px]">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#141416] sm:p-7">
               {badge && (
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
                   {badge}
