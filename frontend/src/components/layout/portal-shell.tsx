@@ -147,16 +147,22 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 
   const sidebarContent = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <KlasraMark className="h-8 w-8" />
-        <div className="min-w-0">
-          <p className="truncate font-display text-sm font-bold tracking-tight text-foreground">
-            Klasra
-          </p>
-          <p className="truncate text-[11px] font-medium text-muted-foreground">
-            {activeMembership?.school_name || (user.is_platform_admin ? "Platform Ops" : "LMS Portal")}
-          </p>
-        </div>
+      <div className="flex h-16 items-center border-b border-border px-5">
+        <Link
+          href="/"
+          onClick={() => setMobileOpen(false)}
+          className="flex min-w-0 items-center gap-2.5 rounded-lg transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <KlasraMark className="h-8 w-8" />
+          <div className="min-w-0">
+            <p className="truncate font-display text-sm font-bold tracking-tight text-foreground">
+              Klasra
+            </p>
+            <p className="truncate text-[11px] font-medium text-muted-foreground">
+              {activeMembership?.school_name || (user.is_platform_admin ? "Platform Ops" : "LMS Portal")}
+            </p>
+          </div>
+        </Link>
       </div>
 
       {activeMemberships.length > 1 && (
