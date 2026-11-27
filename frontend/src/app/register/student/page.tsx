@@ -103,6 +103,7 @@ function StudentRegisterForm() {
         )}
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor="fullName">Full name</Label>
         <Input
@@ -131,6 +132,7 @@ function StudentRegisterForm() {
           <p className="text-xs text-destructive">{fieldErrors.email}</p>
         )}
       </div>
+      </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="studentRef">Admission / Student ID (optional)</Label>
@@ -143,6 +145,7 @@ function StudentRegisterForm() {
         />
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor="password">Create password</Label>
         <PasswordInput
@@ -173,6 +176,7 @@ function StudentRegisterForm() {
             {fieldErrors.confirmPassword}
           </p>
         )}
+      </div>
       </div>
 
       <Button type="submit" size="lg" className="w-full" disabled={submitting}>

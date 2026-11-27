@@ -33,7 +33,7 @@ export function AuthShell({
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-12">
       {/* Left Editorial Visual Column (Desktop lg+) */}
-      <aside className="relative hidden overflow-hidden border-r border-border bg-[#0C0C0E] lg:col-span-6 lg:flex lg:flex-col lg:justify-between">
+      <aside className="relative hidden overflow-hidden border-r border-border bg-[#0C0C0E] lg:col-span-5 lg:flex lg:flex-col lg:justify-between">
         <Image
           src={imageSrc}
           alt={imageAlt}
@@ -67,7 +67,7 @@ export function AuthShell({
       </aside>
 
       {/* Right Form Column */}
-      <div className="flex flex-col lg:col-span-6">
+      <div className="flex flex-col lg:col-span-7">
         <header className="flex items-center justify-between px-4 py-5 sm:px-8">
           <Link href="/" className="lg:invisible" aria-label="Klasra Home">
             <KlasraLogo />
@@ -85,8 +85,8 @@ export function AuthShell({
           </div>
         </header>
 
-        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-8 lg:px-12">
-          <div className="w-full max-w-md">
+        <main className="flex flex-1 items-center justify-center px-4 py-6 sm:px-8 lg:justify-start lg:px-10 xl:px-14">
+          <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl">
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm dark:border-white/[0.08] dark:bg-[#141416] sm:p-8">
               {badge && (
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
