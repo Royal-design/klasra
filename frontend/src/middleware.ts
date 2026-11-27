@@ -10,8 +10,15 @@ const PROTECTED_PREFIXES = [
   "/parent/children",
 ];
 
-const AUTH_ONLY_PATHS = ["/login", "/forgot-password"];
-
+/**
+ * Edge route guard:
+ * - Redirects unauthenticated visitors away from protected portals when no
+ *   session cookie is present.
+ * - Intentionally does NOT redirect `/login` -> `/dashboard` on cookie
+ *   existence alone, preventing infinite redirect loops when a session cookie
+ *   is expired or revoked server-side (valid sessions are redirected by
+ *   `/login` once GET /api/v1/auth/me confirms 200 OK).
+ */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSessionCookie =
@@ -27,11 +34,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const isAuthOnly = AUTH_ONLY_PATHS.some((p) => pathname === p);
-  if (isAuthOnly && hasSessionCookie) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
   return NextResponse.next();
 }
 
@@ -43,7 +45,5 @@ export const config = {
     "/teacher/:path*",
     "/student/:path*",
     "/parent/children/:path*",
-    "/login",
-    "/forgot-password",
   ],
 };
