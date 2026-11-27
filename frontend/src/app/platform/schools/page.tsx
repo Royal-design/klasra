@@ -102,8 +102,10 @@ export default function PlatformSchoolsPage() {
           },
         }),
       }),
-    onSuccess: () => {
-      toast.success("School created with its initial administrator.");
+    onSuccess: (_data, vars) => {
+      toast.success(
+        `School "${vars.name}" onboarded! Welcome email sent to ${vars.adminEmail}.`
+      );
       setCreateOpen(false);
       setName("");
       setSlug("");

@@ -1,3 +1,5 @@
+import html
+import logging
 import uuid
 
 from sqlalchemy.orm import Session
@@ -10,6 +12,9 @@ from app.models.user import User
 from app.repositories import membership_repo, school_repo, user_repo
 from app.schemas.school import SchoolCreateRequest, SchoolUpdateRequest
 from app.services.audit import record_audit_event
+from app.services.email import EmailMessage, EmailProvider
+
+logger = logging.getLogger(__name__)
 
 
 def create_school_with_admin(
@@ -17,6 +22,8 @@ def create_school_with_admin(
     *,
     payload: SchoolCreateRequest,
     actor_user_id: uuid.UUID,
+    email_provider: EmailProvider | None = None,
+    frontend_base_url: str = "http://localhost:3000",
 ) -> tuple[School, User, SchoolMembership]:
     """Create a school and its initial active school administrator."""
     if school_repo.get_school_by_slug(db, slug=payload.slug) is not None:
@@ -70,6 +77,34 @@ def create_school_with_admin(
     db.refresh(school)
     db.refresh(admin_user)
     db.refresh(membership)
+
+    if email_provider is not None:
+        login_url = f"{frontend_base_url.rstrip('/')}/login"
+        message = EmailMessage(
+            to=admin_user.email,
+            subject=f"Welcome to Klasra — {school.name} is ready",
+            text=(
+                f"Hello {admin_user.full_name},\n\n"
+                f"Your school workspace for {school.name} (/{school.slug}) has been created on Klasra.\n"
+                f"You have been assigned as the School Administrator.\n\n"
+                f"Sign in here: {login_url}\n\n"
+                "For security, your password was not included in this email. "
+                "Use the password set during onboarding or request a password reset on the sign-in page."
+            ),
+            html=(
+                f"<p>Hello {html.escape(admin_user.full_name)},</p>"
+                f"<p>Your school workspace for <strong>{html.escape(school.name)}</strong> "
+                f"(<code>/{html.escape(school.slug)}</code>) has been created on <strong>Klasra</strong>.</p>"
+                f"<p>You have been assigned as the <strong>School Administrator</strong>.</p>"
+                f'<p><a href="{html.escape(login_url)}">Sign in to Klasra</a></p>'
+                "<p>For your security, your password is not included in this email.</p>"
+            ),
+        )
+        try:
+            email_provider.send(message)
+        except Exception:
+            logger.exception("Failed to send school onboarding email for school %s", school.id)
+
     return school, admin_user, membership
 
 

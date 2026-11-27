@@ -3,8 +3,15 @@ import uuid
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import AuthContext, require_platform_admin
+from app.api.deps import (
+    AuthContext,
+    get_app_settings,
+    get_email_provider,
+    require_platform_admin,
+)
+from app.core.config import Settings
 from app.db.session import get_db
+from app.services.email import EmailProvider
 from app.schemas.pagination import (
     PaginatedResponse,
     PaginationParams,
@@ -32,9 +39,15 @@ def create_school_endpoint(
     payload: SchoolCreateRequest,
     auth: AuthContext = Depends(require_platform_admin),
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_app_settings),
+    email_provider: EmailProvider = Depends(get_email_provider),
 ) -> SchoolCreateResponse:
     school, admin_user, membership = create_school_with_admin(
-        db, payload=payload, actor_user_id=auth.user.id
+        db,
+        payload=payload,
+        actor_user_id=auth.user.id,
+        email_provider=email_provider,
+        frontend_base_url=settings.frontend_base_url,
     )
     return SchoolCreateResponse(
         school=SchoolResponse.model_validate(school),
