@@ -143,13 +143,14 @@ A single parent account may accept approved links from different schools for chi
 - **AUTH-05:** Every protected operation checks both role and school/resource assignment.
 - **AUTH-06:** The system records administrator decisions and changes to role, enrollment, and guardian links.
 
-### Lessons and assignments
+### Lessons, assignments, quizzes, and exams
 
-- **LEARN-01:** Teacher can publish lessons/materials to assigned subject offerings.
+- **LEARN-01:** Teacher can publish lessons/materials (including allow-listed external video links and uploaded lesson videos) to assigned subject offerings.
 - **ASSIGN-01:** Teacher can create an assignment for an assigned subject offering.
 - **ASSIGN-02:** Students enrolled in the offering can submit typed text and file uploads.
 - **ASSIGN-03:** System records submission time and retains submission history when resubmission is allowed.
 - **ASSIGN-04:** Teacher can review submissions and record a grade and feedback.
+- **ASSESS-01:** Teacher can create timed quizzes, tests (CA), and exams with objective auto-graded questions (multiple choice, true/false, multi-select) and manually graded short-answer/essay questions, enforcing availability windows, attempt limits, and draft-to-publish score visibility.
 
 ### Grades, feedback, and attendance
 

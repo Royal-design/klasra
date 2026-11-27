@@ -17,7 +17,8 @@
 | **7** | Assignments, text/file submissions & resubmission rules | `ASSIGN-01`, `ASSIGN-02`, `ASSIGN-03` | **Done** | 20/20 `pytest` tests passing; migration `0008_slice7_assignments` applied to PostgreSQL `lms` |
 | **8** | Grades, feedback & student/parent progress views | `ASSIGN-04`, `PROG-01`, `PROG-02` | **Done** | 21/21 `pytest` tests passing; migration `0009_slice8_grades` applied to PostgreSQL `lms` |
 | **9** | Attendance recording & history | `ATT-01`, `ATT-02`, `PROG-01`, `PROG-02` | **Done** | 22/22 `pytest` tests passing; migration `0010_slice9_attendance` applied to PostgreSQL `lms` |
-| **10** | Deployment, backups, monitoring, privacy review & lesson video support | Security, Ops & `LEARN-01` | **Done** | S3/Backblaze B2 storage adapter, presigned direct upload/playback URLs, 50 MB lesson video limit + `video_url` (`0011_lesson_video_url`), `Dockerfile`, JSON PII-safe logging, `X-Request-ID`, `DEPLOYMENT_AND_PRIVACY.md` (26/26 `pytest` passing) |
+| **10** | Deployment, backups, monitoring, privacy review & lesson video support | Security, Ops & `LEARN-01` | **Done** | S3/Backblaze B2 storage adapter, presigned direct upload/playback URLs, 50 MB lesson video limit + `video_url` (`0011_lesson_video_url`), `Dockerfile`, JSON PII-safe logging, `X-Request-ID`, `DEPLOYMENT_AND_PRIVACY.md` |
+| **11** | Quizzes, Tests (CA) & Exams (timed attempts, auto-grading + manual grading) | `ASSESS-01`, `PROG-01`, `PROG-02` | **Done** | `assessments`, `assessment_questions`, `assessment_attempts`, `assessment_answers` (`0012_slice11_assessments`), student/parent published results (28/28 `pytest` passing) |
 
 ## 2. Requirement ID Coverage
 
@@ -120,6 +121,13 @@
 - Added non-root `backend/Dockerfile` and `DEPLOYMENT_AND_PRIVACY.md` (production checklist, encrypted PostgreSQL backup/restore runbook, monitoring alerts, and NDPA 2023 child-data compliance review).
 - Verified with `pytest -v` (26 passed).
 
-## 4. Next Up — Next.js Frontend
+### Slice 11 — Quizzes, Tests (CA) & Exams (`ASSESS-01`)
+- Added `assessments`, `assessment_questions`, `assessment_attempts`, and `assessment_answers` models (`app/models/assessment.py`), repository (`app/repositories/assessment_repo.py`), schemas (`app/schemas/assessment.py`), service (`app/services/assessment.py`), router (`app/api/v1/assessments.py`), and Alembic migration `0012_slice11_assessments`.
+- Supports `quiz | test | exam`, availability windows, `time_limit_minutes`, `max_attempts`, `single_choice | true_false | multi_select` instant auto-grading, `short_answer` manual teacher grading, draft-to-publish score visibility, and student/approved-parent published result endpoints (`/students/me/assessments`, `/parent/children/{student_id}/assessments`).
+- Verified with `pytest -v` (28 passed).
 
-All **10 backend slices** are **Done**! Ready to scaffold the Next.js application in `frontend/` consuming `/api/v1`.
+## 4. Frontend Progress (`frontend/` — Next.js App Router + `shadcn/ui`)
+
+- **Phase 1 (Done):** Next.js 15 + TypeScript + Tailwind CSS v4 + `shadcn/ui` + Framer Motion + `next-themes` Light/Dark theme + generated editorial imagery + Public Landing Page (`/`).
+- **Phase 2 (Done):** Same-origin `/api/v1` proxy, typed `api-client.ts` (`HttpOnly` cookies + `X-CSRF-Token`), `AuthProvider` + Zustand UI store (`workspace-store.ts`), Linear/Raycast dark charcoal UI refinement with borderless recessed inputs, Zod + Confirm Password validation across all auth/onboarding pages (`/login`, `/forgot-password`, `/reset-password`, `/register/student`, `/staff/accept`, `/parent/verify`), `PortalShell`, `ChangePasswordDialog`, `/dashboard`, plus `frontend/Dockerfile`, `docker-compose.yml`, and `dev.ps1`.
+- **Next Up — Phase 3:** Platform Admin Schools Directory & School Admin Portal (Academics, Users/Invites, CSV/XLSX Import Wizard, Student Registrations, Guardian Links).

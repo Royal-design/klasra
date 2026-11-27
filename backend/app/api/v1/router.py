@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.academic import router as academic_router
+from app.api.v1.assessments import router as assessments_router
 from app.api.v1.assignments import router as assignments_router
 from app.api.v1.attendance import router as attendance_router
 from app.api.v1.auth import router as auth_router
@@ -26,5 +27,6 @@ api_router.include_router(staff_invites_router)
 api_router.include_router(guardians_router)
 api_router.include_router(lessons_router)
 api_router.include_router(assignments_router)
+api_router.include_router(assessments_router)
 api_router.include_router(grades_router)
 api_router.include_router(attendance_router)

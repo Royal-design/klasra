@@ -1,7 +1,8 @@
 # FRONTEND_DESIGN_PLAN.md — School LMS Frontend Architecture & UI/UX Blueprint
 
-**Target Stack:** Next.js (App Router, TypeScript), Tailwind CSS v4, **shadcn/ui** (Radix UI primitives + `cmdk` + `sonner`), Framer Motion, Lucide Icons, TanStack Query, Zod + React Hook Form, `next-themes`  
-**Backend API:** FastAPI `/api/v1` (`HttpOnly` cookie sessions + `X-CSRF-Token`, paginated `items` + `meta`, Backblaze B2 / S3 presigned uploads & video playback)  
+**Target Stack:** Next.js 15 (App Router, TypeScript), Tailwind CSS v4, **shadcn/ui** (Radix UI primitives + `sonner`), **Zustand** (non-sensitive UI/workspace state), Framer Motion, Lucide Icons, TanStack Query, **Zod** (strict validation + Confirm Password on all password forms), `next-themes`  
+**Dark Mode Direction:** Inspired by **Linear & Raycast** — true neutral dark charcoal surfaces (`#0A0A0B` canvas, `#141416` elevated cards, `#1B1B1F` borderless recessed inputs), hairline `rgba(255,255,255,0.08)` borders, crisp zinc typography (`#F4F4F5` / `#A1A1AA`), and restrained Indigo/Emerald accents.  
+**Backend API:** FastAPI `/api/v1` (`HttpOnly` cookie sessions + `X-CSRF-Token` via Next.js same-origin rewrite proxy, paginated `items` + `meta`, Backblaze B2 / S3 presigned uploads & video playback, Quizzes/Tests/Exams `ASSESS-01`)  
 **Scope:** Public marketing/onboarding landing experience + 5 role-scoped portals (Platform Admin, School Admin, Teacher, Student, Multi-School Parent)
 
 ---
@@ -179,9 +180,9 @@ frontend/
 3. **Phase 3 — Platform Admin & School Admin Portals:**
    - Platform Admin school creation/suspension dashboard.
    - School Admin: academic years/terms/year-levels/class-groups/subjects/offerings, staff & student management, CSV/XLSX bulk import wizard (validate → preview → commit), student registration approval queue, and guardian link management.
-4. **Phase 4 — Teacher Portal (Lessons, Video, Assignments, Grading & Attendance):**
-   - Assigned subject offerings workspace, lesson editor with `video_url` & presigned 50 MB video/document uploader, assignment builder, split-screen grading drawer, and one-tap attendance roll-call table.
+4. **Phase 4 — Teacher Portal (Lessons, Video, Assignments, Quizzes/Exams, Grading & Attendance):**
+   - Assigned subject offerings workspace, lesson editor with `video_url` & presigned 50 MB video/document uploader, assignment builder, **Quiz / Test / Exam builder** (multiple-choice, true/false, multi-select, short-answer + timed window & attempt settings), split-screen grading drawer (for both assignment submissions and short-answer exam responses), and one-tap attendance roll-call table.
 5. **Phase 5 — Student & Multi-School Parent Portals + Final Polish:**
-   - Student classroom view (lessons + video player, assignment submission & version history, published grades & attendance).
-   - Parent multi-school child switcher with published grades, teacher feedback, and attendance history.
+   - Student classroom view (lessons + video player, assignment submission & version history, **live timed Quiz/Exam runner** with countdown timer & instant auto-graded feedback when allowed, published grades, assessment scores & attendance).
+   - Parent multi-school child switcher with published grades, **published quiz/test/exam results**, teacher feedback, and attendance history.
    - End-to-end verification against live FastAPI (`127.0.0.1:8000`) in both Light & Dark mode at desktop and mobile (360px) viewports.

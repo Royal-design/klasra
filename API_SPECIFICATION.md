@@ -219,6 +219,24 @@ Allowed statuses: `present`, `absent`, `late`, `excused`. Every record and updat
 | `GET` | `/api/v1/students/me/attendance` | Student | No | View **only own** attendance history (paginated, `?subject_offering_id=&status=&date_from=&date_to=`). |
 | `GET` | `/api/v1/parent/children/{student_id}/attendance` | Approved Parent | No | View **only approved child's** attendance history (paginated, `?status=&date_from=&date_to=`; `403` otherwise). |
 
+### Quizzes, Tests (CA) & Exams (Slice 11 — `ASSESS-01`, `PROG-01`, `PROG-02`)
+
+Supports `assessment_type` = `quiz` | `test` | `exam` with timed windows (`available_from`, `available_until`, `time_limit_minutes`), attempt limits (`max_attempts`), auto-graded objective questions (`single_choice`, `true_false`, `multi_select`), manually graded `short_answer` essays, and draft-to-publish score visibility. `correct_answers` are always stripped for students.
+
+| Method | Path | Access | CSRF Required | Description |
+| --- | --- | --- | --- | --- |
+| `POST` | `/api/v1/offerings/{offering_id}/assessments` | Assigned Teacher | Yes | Create a `quiz`, `test`, or `exam` (audited). |
+| `GET` | `/api/v1/offerings/{offering_id}/assessments` | Assigned Teacher, Enrolled Student | No | List assessments (paginated, `?assessment_type=&status=&q=`). Students see `published`/`closed` only with `correct_answers` hidden. |
+| `PATCH` | `/api/v1/offerings/{offering_id}/assessments/{assessment_id}` | Assigned Teacher | Yes | Update settings, window, or publish/close status (audited). |
+| `POST` | `/api/v1/offerings/{offering_id}/assessments/{assessment_id}/questions` | Assigned Teacher | Yes | Add `single_choice`, `true_false`, `multi_select`, or `short_answer` question and recalculate `total_points`. |
+| `DELETE` | `/api/v1/offerings/{offering_id}/assessments/{assessment_id}/questions/{question_id}` | Assigned Teacher | Yes | Remove a question and recalculate `total_points`. |
+| `POST` | `/api/v1/assessments/{assessment_id}/attempts` | Enrolled Student | Yes | Start or resume a timed attempt (enforces availability window & `max_attempts`, audited). |
+| `POST` | `/api/v1/attempts/{attempt_id}/submit` | Student (owner) | Yes | Submit answers; auto-grades objective questions and optionally publishes immediately when `show_results_immediately=true` (audited). |
+| `GET` | `/api/v1/assessments/{assessment_id}/attempts` | Assigned Teacher, Enrolled Student (own) | No | List attempts (paginated, `?student_user_id=&status=`). Students see only their own, with scores hidden until published. |
+| `PUT` | `/api/v1/attempts/{attempt_id}/grade` | Assigned Teacher | Yes | Grade `short_answer` questions, set `teacher_feedback`, and publish/unpublish results (audited). |
+| `GET` | `/api/v1/students/me/assessments` | Student | No | View **only own published** quiz/test/exam results (paginated, `?assessment_type=`). |
+| `GET` | `/api/v1/parent/children/{student_id}/assessments` | Approved Parent | No | View **only approved child's published** quiz/test/exam results (paginated, `?assessment_type=`; `403` otherwise). |
+
 ---
 
 ## 3. Production Hardening & Observability (Slice 10)
